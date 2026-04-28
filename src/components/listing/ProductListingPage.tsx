@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { SlidersHorizontal, X, ChevronDown, ChevronRight, CheckCircle } from "lucide-react";
@@ -24,12 +25,12 @@ interface Props {
 
 const LIMIT = 20;
 
-export default function ProductListingPage({
+// ─── Inner component that uses useSearchParams ──────────────────────────────
+function ProductListingContent({
   gender,
   categoryId: serverCategoryId,
   title,
-  searchParams: serverSP,
-}: Props) {
+}: Omit<Props, "searchParams">) {
   const router   = useRouter();
   const pathname = usePathname();
   const sp       = useSearchParams();
@@ -70,7 +71,6 @@ export default function ProductListingPage({
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  // ── FIX 3: toggleSection is a plain state setter, not inside a sub-component ──
   const toggleSection = (key: string) =>
     setExpandedFilters((s) => {
       const n = new Set(s);
@@ -89,11 +89,10 @@ export default function ProductListingPage({
       .then((j) => { if (j.success) setFilterData(j.data); });
   }, [gender, catFilter]);
 
-  // ── FIX 2: always send gender to the products API ──
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({
-      gender,           // always included
+      gender,
       page:  String(page),
       limit: String(LIMIT),
       sort,
@@ -114,14 +113,12 @@ export default function ProductListingPage({
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // Build category tree
   const rootCats  = filterData.categories.filter((c) => c.gender === gender && !c.parent_id);
   const getSubCats = (parentId: string) =>
     filterData.categories.filter((c) => c.parent_id === parentId);
 
   const totalPages = Math.ceil(total / LIMIT);
 
-  // ── FIX 3: filter panel is inline JSX, NOT a nested component ──
   const filterPanel = (
     <div className="space-y-5">
       {/* Title */}
@@ -201,7 +198,6 @@ export default function ProductListingPage({
                 return (
                   <li key={cat.id}>
                     <div className="flex items-center">
-                      {/* Category name → sets filter */}
                       <button
                         onClick={() => updateParam("category", isSelected ? null : cat.id)}
                         className={cn(
@@ -214,7 +210,6 @@ export default function ProductListingPage({
                         {cat.name}
                       </button>
 
-                      {/* ── FIX 1: chevron ONLY toggles expand, never changes URL ── */}
                       {subCats.length > 0 && (
                         <button
                           onClick={() => toggleSection(`cat-${cat.id}`)}
@@ -233,7 +228,6 @@ export default function ProductListingPage({
                       )}
                     </div>
 
-                    {/* Subcategories */}
                     {(isExpanded || expandedFilters.has(`cat-${cat.id}`)) &&
                       subCats.length > 0 && (
                         <ul className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-pink-100 pl-2">
@@ -471,5 +465,25 @@ export default function ProductListingPage({
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Public wrapper with Suspense ───────────────────────────────────────────
+export default function ProductListingPage(props: Props) {
+  const { searchParams, ...rest } = props;
+  // searchParams is not used in the inner component because it reads from useSearchParams()
+  // But we keep it to satisfy the Props interface.
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-8 h-8 border-2 border-pink-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        </div>
+      }
+    >
+      <ProductListingContent gender={rest.gender} categoryId={rest.categoryId} title={rest.title} />
+    </Suspense>
   );
 }

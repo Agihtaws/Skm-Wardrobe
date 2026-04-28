@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import ProductListingPage from "@/components/listing/ProductListingPage";
 import type { Metadata } from "next";
@@ -27,10 +28,20 @@ export default async function GenderPage({ params, searchParams }: Props) {
   if (!GENDER_META[gender]) notFound();
 
   return (
-    <ProductListingPage
-      gender={gender as Gender}
-      title={GENDER_META[gender].title}
-      searchParams={{ ...sp, gender }} // ← pass gender explicitly
-    />
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-8 h-8 border-2 border-pink-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        </div>
+      }
+    >
+      <ProductListingPage
+        gender={gender as Gender}
+        title={GENDER_META[gender].title}
+        searchParams={{ ...sp, gender }}
+      />
+    </Suspense>
   );
 }

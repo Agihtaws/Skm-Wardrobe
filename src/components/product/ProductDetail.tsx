@@ -186,7 +186,7 @@ export default function ProductDetail({ product, related }: Props) {
           <span key={i} className="flex items-center gap-1 min-w-0">
             {i > 0 && <ChevronRight size={11} className="flex-shrink-0" />}
             {b.href === "#" ? (
-              <span className="text-gray-600 font-medium truncate max-w-[160px]">
+              <span className="text-pink-600 font-medium truncate max-w-[160px]">
                 {b.label}
               </span>
             ) : (
@@ -214,12 +214,12 @@ export default function ProductDetail({ product, related }: Props) {
 
           {/* Name + Price */}
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug">
+            <h1 className="text-xl sm:text-2xl font-bold text-pink-700 leading-snug">
               {product.name}
             </h1>
 
             <div className="flex items-baseline gap-3 mt-2.5">
-              <span className="text-2xl sm:text-3xl font-bold text-gray-900">
+              <span className="text-2xl sm:text-3xl font-bold text-pink-600">
                 ₹{sellPrice.toLocaleString("en-IN")}
               </span>
               {hasDiscount && (
@@ -244,22 +244,22 @@ export default function ProductDetail({ product, related }: Props) {
 
           {/* Description */}
           {product.description && (
-            <p className="text-gray-600 text-sm leading-relaxed border-t border-gray-100 pt-4">
+            <p className="text-gray-600 text-sm leading-relaxed border-t border-pink-100 pt-4">
               {product.description}
             </p>
           )}
 
           {/* Attributes */}
           {Object.keys(attrGroups).length > 0 && (
-            <div className="space-y-2.5 border-t border-gray-100 pt-4">
+            <div className="space-y-2.5 border-t border-pink-100 pt-4">
               {Object.entries(attrGroups).map(([name, values]) => (
                 <div key={name} className="flex items-start gap-3">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest w-16 sm:w-20 flex-shrink-0 pt-1.5">
+                  <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest w-16 sm:w-20 flex-shrink-0 pt-1.5">
                     {name}
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {values.map((v) => (
-                      <span key={v} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full border border-gray-200">
+                      <span key={v} className="px-3 py-1 bg-pink-50 text-pink-700 text-sm rounded-full border border-pink-200">
                         {v}
                       </span>
                     ))}
@@ -270,7 +270,7 @@ export default function ProductDetail({ product, related }: Props) {
           )}
 
           {/* Price breakdown */}
-          <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2 border border-gray-100">
+          <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2 border border-pink-100">
             <div className="flex justify-between text-gray-600">
               <span>Product price</span>
               <span>₹{sellPrice.toLocaleString("en-IN")}</span>
@@ -283,7 +283,7 @@ export default function ProductDetail({ product, related }: Props) {
               <span>Shipping</span>
               <span>₹{SHIPPING_CHARGE}</span>
             </div>
-            <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-2">
+            <div className="flex justify-between font-bold text-pink-700 border-t border-pink-200 pt-2">
               <span>Total payable</span>
               <span>₹{totalPayable.toLocaleString("en-IN")}</span>
             </div>
@@ -302,7 +302,7 @@ export default function ProductDetail({ product, related }: Props) {
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 py-3 sm:py-3.5 rounded-xl font-semibold text-sm transition-all border-2",
                   inCart
-                    ? "bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
+                    ? "bg-pink-50 text-pink-700 border-pink-300 hover:bg-pink-100"
                     : "bg-white border-pink-600 text-pink-600 hover:bg-pink-50"
                 )}
               >
@@ -325,15 +325,15 @@ export default function ProductDetail({ product, related }: Props) {
           )}
 
           {/* Trust badges */}
-          <div className="grid grid-cols-3 gap-2 border-t border-gray-100 pt-4">
+          <div className="grid grid-cols-3 gap-2 border-t border-pink-100 pt-4">
             {[
               { icon: Package,    text: "Delhivery shipping" },
               { icon: RotateCcw, text: "3-day returns"       },
               { icon: ShieldCheck,text: "Secure payment"     },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex flex-col items-center gap-1.5 text-center">
-                <div className="w-8 h-8 bg-pink-50 rounded-lg flex items-center justify-center">
-                  <Icon size={15} className="text-pink-500" />
+                <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
+                  <Icon size={15} className="text-pink-600" />
                 </div>
                 <span className="text-[11px] text-gray-500 leading-tight">{text}</span>
               </div>
@@ -345,7 +345,7 @@ export default function ProductDetail({ product, related }: Props) {
       {/* Related products */}
       {related.length > 0 && (
         <section className="mt-10 sm:mt-14">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
+          <h2 className="text-lg sm:text-xl font-bold text-pink-700 mb-4">
             You may also like
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">

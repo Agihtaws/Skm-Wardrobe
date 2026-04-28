@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProductListingPage from "@/components/listing/ProductListingPage";
@@ -34,11 +35,21 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   if (!cat) notFound();
 
   return (
-    <ProductListingPage
-      gender={gender as Gender}
-      categoryId={cat.id}
-      title={cat.name}
-      searchParams={sp}
-    />
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-8 h-8 border-2 border-pink-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        </div>
+      }
+    >
+      <ProductListingPage
+        gender={gender as Gender}
+        categoryId={cat.id}
+        title={cat.name}
+        searchParams={sp}
+      />
+    </Suspense>
   );
 }

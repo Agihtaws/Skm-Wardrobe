@@ -60,17 +60,17 @@ export default async function SearchPage({ searchParams }: Props) {
   const { q = "", page = "1" } = await searchParams;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">
         {q ? `Results for "${q}"` : "Search"}
       </h1>
-      <Suspense fallback={
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="aspect-[3/4] rounded-xl bg-gray-100 animate-pulse" />
-          ))}
-        </div>
-      }>
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="w-8 h-8 border-2 border-pink-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
         <SearchResults query={q} page={parseInt(page)} />
       </Suspense>
     </div>

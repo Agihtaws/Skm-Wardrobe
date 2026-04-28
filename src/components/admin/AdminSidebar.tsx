@@ -4,17 +4,18 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Package, FolderTree,
-  Tag, ShoppingBag, LogOut, ExternalLink,
+  Tag, ShoppingBag, LogOut, ExternalLink,RotateCcw,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { label: "Dashboard",   href: "/admin",            icon: LayoutDashboard },
-  { label: "Products",    href: "/admin/products",    icon: Package },
-  { label: "Categories",  href: "/admin/categories",  icon: FolderTree },
-  { label: "Attributes",  href: "/admin/attributes",  icon: Tag },
-  { label: "Orders",      href: "/admin/orders",      icon: ShoppingBag },
+  { label: "Dashboard",  href: "/admin",         icon: LayoutDashboard },
+  { label: "Products",   href: "/admin/products", icon: Package         },
+  { label: "Categories", href: "/admin/categories",icon: FolderTree     },
+  { label: "Attributes", href: "/admin/attributes",icon: Tag            },
+  { label: "Orders",     href: "/admin/orders",   icon: ShoppingBag     },
+  { label: "Returns",    href: "/admin/returns",   icon: RotateCcw      }, // ← add
 ];
 
 export default function AdminSidebar() {
