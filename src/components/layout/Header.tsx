@@ -14,19 +14,38 @@ import { NAV_LINKS } from "@/config/nav";
 import toast from "react-hot-toast";
 import Image from "next/image";
 
-// Avatar: uses Google profile pic if available, else DiceBear initials
-function UserAvatar({ user, profile, size = 28 }: {
-  user: { email?: string | null };
+// ─── Avatar ───────────────────────────────────────────────────────────────────
+// Priority: profile.avatar_url → user_metadata.avatar_url → DiceBear initials
+function UserAvatar({
+  user,
+  profile,
+  size = 28,
+}: {
+  user: {
+    email?: string | null;
+    user_metadata?: { avatar_url?: string; full_name?: string };
+  };
   profile?: { avatar_url?: string | null; full_name?: string | null } | null;
   size?: number;
 }) {
   const [imgError, setImgError] = useState(false);
 
-  if (profile?.avatar_url && !imgError) {
+  const avatarUrl =
+    profile?.avatar_url ||
+    user.user_metadata?.avatar_url ||
+    null;
+
+  const altName =
+    profile?.full_name ||
+    user.user_metadata?.full_name ||
+    user.email ||
+    "avatar";
+
+  if (avatarUrl && !imgError) {
     return (
       <Image
-        src={profile.avatar_url}
-        alt={profile.full_name ?? "avatar"}
+        src={avatarUrl}
+        alt={altName}
         width={size}
         height={size}
         className="rounded-full flex-shrink-0 object-cover"
@@ -38,11 +57,11 @@ function UserAvatar({ user, profile, size = 28 }: {
 
   // Fallback: DiceBear initials
   const seed = encodeURIComponent(user.email ?? "user");
-  const src  = `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=db2777&textColor=ffffff&fontSize=40`;
+  const src = `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=db2777&textColor=ffffff&fontSize=40`;
   return (
     <Image
       src={src}
-      alt={user.email ?? "avatar"}
+      alt={altName}
       width={size}
       height={size}
       className="rounded-full flex-shrink-0"
@@ -51,10 +70,11 @@ function UserAvatar({ user, profile, size = 28 }: {
   );
 }
 
+// ─── Header ───────────────────────────────────────────────────────────────────
 export default function Header() {
-  const router      = useRouter();
+  const router = useRouter();
   const { user, profile } = useAuthStore();
-  const cartCount   = useCartStore((s) => s.count());
+  const cartCount = useCartStore((s) => s.count());
   const setCartOpen = useCartStore((s) => s.setOpen);
 
   const [activeMenu,     setActiveMenu]     = useState<string | null>(null);
@@ -70,6 +90,7 @@ export default function Header() {
   const userRef   = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
 
+  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (userRef.current && !userRef.current.contains(e.target as Node))
@@ -81,6 +102,7 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Auto-focus search input
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
   }, [searchOpen]);
@@ -99,7 +121,9 @@ export default function Header() {
     const res  = await fetch(`/api/products?search=${encodeURIComponent(q)}&limit=6`);
     const json = await res.json();
     if (json.success)
-      setSuggestions(json.data.products.map((p: any) => ({ name: p.name, slug: p.slug })));
+      setSuggestions(
+        json.data.products.map((p: any) => ({ name: p.name, slug: p.slug }))
+      );
   };
 
   const handleSignOut = async () => {
@@ -109,29 +133,38 @@ export default function Header() {
     router.push("/");
   };
 
-  const displayName = profile?.full_name?.split(" ")[0]
-    || user?.email?.split("@")[0]
-    || "Account";
+  const displayName =
+    profile?.full_name?.split(" ")[0] ||
+    user?.email?.split("@")[0] ||
+    "Account";
 
   return (
-    <header ref={headerRef} className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+    <header
+      ref={headerRef}
+      className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center h-14 gap-4">
 
-          {/* ── Logo (left) ── */}
-          <Link href="/"
-  className="text-xl sm:text-2xl font-bold text-pink-600 tracking-tight flex-shrink-0 mr-3">
-  SKM WARDROBE
-</Link>
+          {/* Logo */}
+          <Link
+            href="/"
+            className="text-xl sm:text-2xl font-bold text-pink-600 tracking-tight flex-shrink-0 mr-3"
+          >
+            SKM WARDROBE
+          </Link>
 
-          {/* ── Right side: Search + Nav + Cart + User ── */}
+          {/* Right side */}
           <div className="flex items-center gap-1 ml-auto">
 
-            {/* Search */}
+            {/* ── Search ── */}
             {searchOpen ? (
               <form onSubmit={handleSearch} className="relative flex items-center gap-1">
                 <div className="relative">
-                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search
+                    size={13}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
                   <input
                     ref={searchRef}
                     type="text"
@@ -150,14 +183,17 @@ export default function Header() {
                   {showSug && suggestions.length > 0 && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-[200] overflow-hidden">
                       {suggestions.map((s, i) => (
-                        <button key={i} type="button"
+                        <button
+                          key={i}
+                          type="button"
                           onMouseDown={() => {
                             router.push(`/products/${s.slug}`);
                             setSearchOpen(false);
                             setSearchQuery("");
                             setSuggestions([]);
                           }}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors">
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors"
+                        >
                           <Search size={11} className="text-gray-400 flex-shrink-0" />
                           {s.name}
                         </button>
@@ -165,53 +201,72 @@ export default function Header() {
                     </div>
                   )}
                 </div>
-                <button type="button"
+                <button
+                  type="button"
                   onClick={() => { setSearchOpen(false); setSearchQuery(""); setSuggestions([]); }}
-                  className="p-1.5 text-gray-400 hover:text-gray-600">
+                  className="p-1.5 text-gray-400 hover:text-gray-600"
+                >
                   <X size={15} />
                 </button>
               </form>
             ) : (
-              <button onClick={() => setSearchOpen(true)}
+              <button
+                onClick={() => setSearchOpen(true)}
                 className="p-2 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
-                aria-label="Search">
+                aria-label="Search"
+              >
                 <Search size={19} />
               </button>
             )}
 
-            {/* ── Desktop Nav links (Women, Kids, Accessories) ── */}
+            {/* ── Desktop Nav ── */}
             <nav className="hidden md:flex items-center gap-0.5">
               {NAV_LINKS.map((link) => (
                 <div key={link.label} className="relative">
                   <button
-                    onClick={() => setActiveMenu((p) => p === link.label ? null : link.label)}
+                    onClick={() =>
+                      setActiveMenu((p) => (p === link.label ? null : link.label))
+                    }
                     className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-gray-700 hover:text-pink-600 rounded-lg hover:bg-pink-50 transition-colors whitespace-nowrap"
                   >
                     {link.label}
-                    <ChevronDown size={13}
-                      className={`transition-transform duration-200 ${activeMenu === link.label ? "rotate-180 text-pink-600" : ""}`}
+                    <ChevronDown
+                      size={13}
+                      className={`transition-transform duration-200 ${
+                        activeMenu === link.label ? "rotate-180 text-pink-600" : ""
+                      }`}
                     />
                   </button>
 
                   {activeMenu === link.label && link.categories.length > 0 && (
                     <div className="absolute top-full right-0 mt-1 z-[100] bg-white border border-gray-100 rounded-2xl shadow-xl p-4 w-[340px]">
-                      <Link href={link.href} onClick={() => setActiveMenu(null)}
-                        className="flex items-center justify-between w-full px-3 py-2 mb-2 text-sm font-bold text-pink-600 hover:bg-pink-50 rounded-xl transition-colors border border-pink-100">
+                      <Link
+                        href={link.href}
+                        onClick={() => setActiveMenu(null)}
+                        className="flex items-center justify-between w-full px-3 py-2 mb-2 text-sm font-bold text-pink-600 hover:bg-pink-50 rounded-xl transition-colors border border-pink-100"
+                      >
                         View All {link.label}
                         <ChevronDown size={12} className="-rotate-90" />
                       </Link>
                       <div className="grid grid-cols-2 gap-1">
                         {link.categories.map((cat) => (
                           <div key={cat.label}>
-                            <Link href={cat.href} onClick={() => setActiveMenu(null)}
-                              className="block px-3 py-2 text-sm font-bold text-gray-900 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors">
+                            <Link
+                              href={cat.href}
+                              onClick={() => setActiveMenu(null)}
+                              className="block px-3 py-2 text-sm font-bold text-gray-900 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors"
+                            >
                               {cat.label}
                             </Link>
                             {cat.children.length > 0 && (
                               <div className="ml-2 mb-1">
                                 {cat.children.map((child) => (
-                                  <Link key={child.label} href={child.href} onClick={() => setActiveMenu(null)}
-                                    className="block px-3 py-1 text-xs text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors">
+                                  <Link
+                                    key={child.label}
+                                    href={child.href}
+                                    onClick={() => setActiveMenu(null)}
+                                    className="block px-3 py-1 text-xs text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
+                                  >
                                     → {child.label}
                                   </Link>
                                 ))}
@@ -226,10 +281,12 @@ export default function Header() {
               ))}
             </nav>
 
-            {/* Cart */}
-            <button onClick={() => setCartOpen(true)}
+            {/* ── Cart ── */}
+            <button
+              onClick={() => setCartOpen(true)}
               className="relative p-2 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
-              aria-label="Cart">
+              aria-label="Cart"
+            >
               <ShoppingBag size={19} />
               {cartCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-pink-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
@@ -238,7 +295,7 @@ export default function Header() {
               )}
             </button>
 
-            {/* User / Login */}
+            {/* ── User / Login ── */}
             {user ? (
               <div ref={userRef} className="relative">
                 <button
@@ -249,39 +306,61 @@ export default function Header() {
                   <span className="hidden sm:block text-xs font-semibold text-gray-700 max-w-[72px] truncate">
                     {displayName}
                   </span>
-                  <ChevronDown size={11} className={`text-gray-400 hidden sm:block transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    size={11}
+                    className={`text-gray-400 hidden sm:block transition-transform ${
+                      userMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
 
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-[100]">
+                    {/* User info header */}
                     <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
                       <UserAvatar user={user} profile={profile} size={34} />
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-gray-900 truncate">
                           {profile?.full_name || displayName}
                         </p>
-                        <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
+                        <p className="text-[11px] text-gray-400 truncate">
+                          {user.email}
+                        </p>
                       </div>
                     </div>
+
+                    {/* Menu items */}
                     <div className="py-1">
-                      <Link href="/account" onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors">
+                      <Link
+                        href="/account"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors"
+                      >
                         <User size={14} /> Profile
                       </Link>
-                      <Link href="/orders" onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors">
+                      <Link
+                        href="/orders"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors"
+                      >
                         <ShoppingBag size={14} /> My Orders
                       </Link>
                       {profile?.role === "admin" && (
-                        <Link href="/admin" onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 transition-colors">
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 transition-colors"
+                        >
                           <Package size={14} /> Admin Panel
                         </Link>
                       )}
                     </div>
+
                     <div className="border-t border-gray-100 pt-1">
-                      <button onClick={handleSignOut}
-                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                      <button
+                        onClick={handleSignOut}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                      >
                         <LogOut size={14} /> Sign out
                       </button>
                     </div>
@@ -289,16 +368,20 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <Link href="/login"
-                className="px-4 py-1.5 text-sm font-bold text-white bg-pink-600 hover:bg-pink-700 rounded-full transition-colors">
+              <Link
+                href="/login"
+                className="px-4 py-1.5 text-sm font-bold text-white bg-pink-600 hover:bg-pink-700 rounded-full transition-colors"
+              >
                 Login
               </Link>
             )}
 
-            {/* Mobile hamburger */}
-            <button onClick={() => setMobileOpen((v) => !v)}
+            {/* ── Mobile hamburger ── */}
+            <button
+              onClick={() => setMobileOpen((v) => !v)}
               className="md:hidden p-2 text-gray-600 hover:text-pink-600 rounded-lg"
-              aria-label="Menu">
+              aria-label="Menu"
+            >
               {mobileOpen ? <X size={19} /> : <Menu size={19} />}
             </button>
           </div>
@@ -312,27 +395,47 @@ export default function Header() {
             {NAV_LINKS.map((link) => (
               <div key={link.label}>
                 <button
-                  onClick={() => setMobileExpanded((p) => p === link.label ? null : link.label)}
-                  className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-bold text-gray-800 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors">
+                  onClick={() =>
+                    setMobileExpanded((p) => (p === link.label ? null : link.label))
+                  }
+                  className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-bold text-gray-800 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors"
+                >
                   {link.label}
-                  <ChevronDown size={15}
-                    className={`transition-transform ${mobileExpanded === link.label ? "rotate-180 text-pink-600" : "text-gray-400"}`} />
+                  <ChevronDown
+                    size={15}
+                    className={`transition-transform ${
+                      mobileExpanded === link.label
+                        ? "rotate-180 text-pink-600"
+                        : "text-gray-400"
+                    }`}
+                  />
                 </button>
+
                 {mobileExpanded === link.label && (
                   <div className="ml-3 mt-1 mb-2 space-y-0.5">
-                    <Link href={link.href} onClick={() => setMobileOpen(false)}
-                      className="block px-3 py-2 text-sm text-pink-600 font-semibold hover:bg-pink-50 rounded-xl">
+                    <Link
+                      href={link.href}
+                      onClick={() => setMobileOpen(false)}
+                      className="block px-3 py-2 text-sm text-pink-600 font-semibold hover:bg-pink-50 rounded-xl"
+                    >
                       View All {link.label}
                     </Link>
                     {link.categories.map((cat) => (
                       <div key={cat.label}>
-                        <Link href={cat.href} onClick={() => setMobileOpen(false)}
-                          className="block px-3 py-2 text-sm font-semibold text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-xl">
+                        <Link
+                          href={cat.href}
+                          onClick={() => setMobileOpen(false)}
+                          className="block px-3 py-2 text-sm font-semibold text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-xl"
+                        >
                           {cat.label}
                         </Link>
                         {cat.children.map((child) => (
-                          <Link key={child.label} href={child.href} onClick={() => setMobileOpen(false)}
-                            className="block px-5 py-1.5 text-xs text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-xl">
+                          <Link
+                            key={child.label}
+                            href={child.href}
+                            onClick={() => setMobileOpen(false)}
+                            className="block px-5 py-1.5 text-xs text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-xl"
+                          >
                             → {child.label}
                           </Link>
                         ))}
@@ -343,31 +446,13 @@ export default function Header() {
               </div>
             ))}
 
-            {user ? (
-              <div className="border-t border-gray-100 pt-3 mt-2 space-y-1">
-                <div className="flex items-center gap-3 px-3 py-2">
-                  <UserAvatar user={user} profile={profile} size={32} />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{displayName}</p>
-                    <p className="text-xs text-gray-400">{user.email}</p>
-                  </div>
-                </div>
-                <Link href="/account" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 rounded-xl">
-                  <User size={14} /> Profile
-                </Link>
-                <Link href="/orders" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 rounded-xl">
-                  <ShoppingBag size={14} /> My Orders
-                </Link>
-                <button onClick={handleSignOut}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-xl">
-                  <LogOut size={14} /> Sign out
-                </button>
-              </div>
-            ) : (
-              <Link href="/login" onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2.5 text-sm font-bold text-white bg-pink-600 rounded-xl text-center mt-3">
+            {/* Only show login button for guests in mobile nav */}
+            {!user && (
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="block px-3 py-2.5 text-sm font-bold text-white bg-pink-600 rounded-xl text-center mt-3"
+              >
                 Login / Register
               </Link>
             )}

@@ -9,11 +9,17 @@ export async function GET(request: NextRequest) {
     const gender     = searchParams.get("gender");
     const categoryId = searchParams.get("category");
 
-    // Step 1 — get category IDs scoped to gender
+    // ── Step 1: resolve scoped category IDs (include sub-categories) ───────
     let scopedCategoryIds: string[] | null = null;
 
     if (categoryId) {
-      scopedCategoryIds = [categoryId];
+      // Include clicked category + all children
+      const { data: subCats } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("parent_id", categoryId)
+        .eq("is_active", true);
+      scopedCategoryIds = [categoryId, ...(subCats?.map((c) => c.id) ?? [])];
     } else if (gender) {
       const { data: cats } = await supabase
         .from("categories")
@@ -23,7 +29,7 @@ export async function GET(request: NextRequest) {
       scopedCategoryIds = cats?.map((c) => c.id) ?? [];
     }
 
-    // Step 2 — get product IDs in scope
+    // ── Step 2: get product IDs in scope ────────────────────────────────────
     let productQuery = supabase
       .from("products")
       .select("id")
@@ -42,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     if (!productIds.length) return ok({ colors: [], fabrics: [], categories: [] });
 
-    // Step 3 — get attributes used by these products only
+    // ── Step 3: get attributes used by these products ───────────────────────
     const { data: usedAttrs } = await supabase
       .from("product_attributes")
       .select(`
@@ -68,7 +74,7 @@ export async function GET(request: NextRequest) {
       if (name === "fabric") fabrics.push({ id: av.id, value: av.value });
     });
 
-    // Step 4 — categories for sidebar (gender-scoped, root only)
+    // ── Step 4: sidebar categories (gender-scoped, all levels) ─────────────
     let catQuery = supabase
       .from("categories")
       .select("*")

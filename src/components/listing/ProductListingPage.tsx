@@ -48,8 +48,8 @@ function ProductListingContent({
   const sort         = sp.get("sort") ?? "created_at";
   const dir          = sp.get("dir") ?? "desc";
   const catFilter    = sp.get("category") ?? serverCategoryId ?? "";
-  const colorFilter  = sp.get("color") ?? "";
-  const fabricFilter = sp.get("fabric") ?? "";
+  const colorFilter  = sp.get("color") ?? "";   // now comma-separated e.g. "id1,id2"
+  const fabricFilter = sp.get("fabric") ?? "";  // now comma-separated e.g. "id1,id2"
 
   const updateParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(sp.toString());
@@ -59,9 +59,15 @@ function ProductListingContent({
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  // Multi‑select toggle for color / fabric
   const toggleParam = (key: string, value: string) => {
-    const current = sp.get(key);
-    updateParam(key, current === value ? null : value);
+    const current = sp.get(key) ?? "";
+    const values  = current ? current.split(",") : [];
+    const exists  = values.includes(value);
+    const updated = exists
+      ? values.filter((v) => v !== value)
+      : [...values, value];
+    updateParam(key, updated.length ? updated.join(",") : null);
   };
 
   const clearAll = () => {
@@ -119,6 +125,14 @@ function ProductListingContent({
 
   const totalPages = Math.ceil(total / LIMIT);
 
+  // Helper to get selected color names
+  const selectedColorNames = colorFilter
+    ? colorFilter.split(",").map(id => filterData.colors.find(c => c.id === id)?.value).filter(Boolean)
+    : [];
+  const selectedFabricNames = fabricFilter
+    ? fabricFilter.split(",").map(id => filterData.fabrics.find(f => f.id === id)?.value).filter(Boolean)
+    : [];
+
   const filterPanel = (
     <div className="space-y-5">
       {/* Title */}
@@ -152,22 +166,30 @@ function ProductListingContent({
                 </button>
               </span>
             )}
-            {colorFilter && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">
-                {filterData.colors.find((c) => c.id === colorFilter)?.value ?? "Color"}
-                <button onClick={() => updateParam("color", null)}>
-                  <X size={11} />
-                </button>
-              </span>
-            )}
-            {fabricFilter && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">
-                {filterData.fabrics.find((f) => f.id === fabricFilter)?.value ?? "Fabric"}
-                <button onClick={() => updateParam("fabric", null)}>
-                  <X size={11} />
-                </button>
-              </span>
-            )}
+            {/* Multiple color chips */}
+            {colorFilter && selectedColorNames.map((name, idx) => {
+              const colorId = colorFilter.split(",")[idx];
+              return (
+                <span key={colorId} className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">
+                  {name}
+                  <button onClick={() => toggleParam("color", colorId)}>
+                    <X size={11} />
+                  </button>
+                </span>
+              );
+            })}
+            {/* Multiple fabric chips */}
+            {fabricFilter && selectedFabricNames.map((name, idx) => {
+              const fabricId = fabricFilter.split(",")[idx];
+              return (
+                <span key={fabricId} className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">
+                  {name}
+                  <button onClick={() => toggleParam("fabric", fabricId)}>
+                    <X size={11} />
+                  </button>
+                </span>
+              );
+            })}
           </div>
         </div>
       )}
@@ -258,7 +280,7 @@ function ProductListingContent({
         </div>
       )}
 
-      {/* Color */}
+      {/* Color - multi‑select */}
       {filterData.colors.length > 0 && (
         <div>
           <button
@@ -273,34 +295,37 @@ function ProductListingContent({
 
           {expandedFilters.has("color") && (
             <ul className="space-y-0.5">
-              {filterData.colors.map((c) => (
-                <li key={c.id}>
-                  <button
-                    onClick={() => toggleParam("color", c.id)}
-                    className={cn(
-                      "w-full text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5 border",
-                      colorFilter === c.id
-                        ? "border-pink-400 bg-pink-50 text-pink-700 font-semibold shadow-sm"
-                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-200"
-                    )}
-                  >
-                    <span
-                      className="w-5 h-5 rounded-full border-2 border-white shadow-sm flex-shrink-0 ring-1 ring-gray-200"
-                      style={{ backgroundColor: c.value.toLowerCase().replace(/\s+/g, "") }}
-                    />
-                    {c.value}
-                    {colorFilter === c.id && (
-                      <CheckCircle size={13} className="ml-auto text-pink-500" />
-                    )}
-                  </button>
-                </li>
-              ))}
+              {filterData.colors.map((c) => {
+                const isSelected = colorFilter.split(",").includes(c.id);
+                return (
+                  <li key={c.id}>
+                    <button
+                      onClick={() => toggleParam("color", c.id)}
+                      className={cn(
+                        "w-full text-left px-3 py-2 rounded-xl text-sm transition-all flex items-center gap-2.5 border",
+                        isSelected
+                          ? "border-pink-400 bg-pink-50 text-pink-700 font-semibold shadow-sm"
+                          : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-200"
+                      )}
+                    >
+                      <span
+                        className="w-5 h-5 rounded-full border-2 border-white shadow-sm flex-shrink-0 ring-1 ring-gray-200"
+                        style={{ backgroundColor: c.value.toLowerCase().replace(/\s+/g, "") }}
+                      />
+                      {c.value}
+                      {isSelected && (
+                        <CheckCircle size={13} className="ml-auto text-pink-500" />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
       )}
 
-      {/* Fabric */}
+      {/* Fabric - multi‑select */}
       {filterData.fabrics.length > 0 && (
         <div>
           <button
@@ -315,20 +340,23 @@ function ProductListingContent({
 
           {expandedFilters.has("fabric") && (
             <div className="flex flex-wrap gap-2">
-              {filterData.fabrics.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => toggleParam("fabric", f.id)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-                    fabricFilter === f.id
-                      ? "bg-pink-600 text-white border-pink-600 shadow-sm"
-                      : "bg-white text-gray-600 border-gray-200 hover:border-pink-300 hover:text-pink-600"
-                  )}
-                >
-                  {f.value}
-                </button>
-              ))}
+              {filterData.fabrics.map((f) => {
+                const isSelected = fabricFilter.split(",").includes(f.id);
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => toggleParam("fabric", f.id)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                      isSelected
+                        ? "bg-pink-600 text-white border-pink-600 shadow-sm"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-pink-300 hover:text-pink-600"
+                    )}
+                  >
+                    {f.value}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -373,7 +401,11 @@ function ProductListingContent({
             Filter
             {hasFilters && (
               <span className="bg-pink-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                {[catFilter, colorFilter, fabricFilter].filter(Boolean).length}
+                {
+                  (catFilter ? 1 : 0) +
+                  (colorFilter ? colorFilter.split(",").length : 0) +
+                  (fabricFilter ? fabricFilter.split(",").length : 0)
+                }
               </span>
             )}
           </button>

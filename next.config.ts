@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "skmwardrobe.in",
       },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com", // Google profile photos
+      },
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com", // DiceBear initials fallback
+      },
     ],
   },
   experimental: {
