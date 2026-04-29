@@ -109,9 +109,8 @@ export default function ProfileClient({ user, initialProfile, initialAddresses }
   };
 
   const handleSignOut = async () => {
-  await createClient().auth.signOut();
-  clear();      // immediately wipes user + profile from Zustand
-  clearCart();  // immediately wipes cart from memory
+  const supabase = createClient();
+  await supabase.auth.signOut();
   router.push("/");
   toast.success("Signed out");
 };

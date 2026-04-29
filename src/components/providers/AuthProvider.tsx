@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
-import { AuthChangeEvent, Session, User } from "@supabase/supabase-js"; // ✅ import types
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 
 export default function AuthProvider({
   children,
@@ -34,13 +34,10 @@ export default function AuthProvider({
         )
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
-
-      if (data && data.length > 0) {
-        setItems(data);
-      }
+      if (data && data.length > 0) setItems(data);
     };
 
-    // ✅ type the user parameter
+    // Initial load
     supabase.auth.getUser().then(({ data: { user } }: { data: { user: User | null } }) => {
       setUser(user);
       if (user) {
@@ -50,22 +47,23 @@ export default function AuthProvider({
       setLoading(false);
     });
 
-    // ✅ type event and session
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
-      const user = session?.user ?? null;
-      setUser(user);
+    // Auth state changes (login, logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
+        const user = session?.user ?? null;
+        setUser(user);
 
-      if (user) {
-        await fetchProfile(user.id);
-        await fetchCart(user.id);
-      } else {
-        clear();
-        clearCart();
+        if (user) {
+          await fetchProfile(user.id);
+          await fetchCart(user.id);
+        } else {
+          // Clear everything on sign out
+          clear();
+          clearCart();
+        }
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
 
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps

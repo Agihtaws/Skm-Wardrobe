@@ -54,16 +54,11 @@ function UserAvatar({
 }
 
 export default function Header() {
-  const router    = useRouter();
-  const { user, profile, clear } = useAuthStore();
-  const { clear: clearCart }     = useCartStore();
-  const cartCount   = useCartStore((s) => s.count());
-  const setCartOpen = useCartStore((s) => s.setOpen);
+  const router  = useRouter();
+  const { user, profile, clear }                              = useAuthStore();
+  const { count: cartCount, setOpen: setCartOpen, clear: clearCartStore } = useCartStore();
 
-  // ← KEY FIX: avoids SSR hydration mismatch for admin link
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
+  const [mounted,        setMounted]        = useState(false);
   const [activeMenu,     setActiveMenu]     = useState<string | null>(null);
   const [mobileOpen,     setMobileOpen]     = useState(false);
   const [searchOpen,     setSearchOpen]     = useState(false);
@@ -76,6 +71,8 @@ export default function Header() {
   const searchRef = useRef<HTMLInputElement>(null);
   const userRef   = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -110,10 +107,12 @@ export default function Header() {
   };
 
   const handleSignOut = async () => {
-    await createClient().auth.signOut();
+    const supabase = createClient();
+    await supabase.auth.signOut();
     clear();
-    clearCart();
+    clearCartStore();
     setUserMenuOpen(false);
+    setMobileOpen(false);
     toast.success("Signed out");
     router.push("/");
   };
@@ -241,9 +240,9 @@ export default function Header() {
               className="relative p-2 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
               aria-label="Cart">
               <ShoppingBag size={19} />
-              {cartCount > 0 && (
+              {cartCount() > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-pink-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {cartCount > 9 ? "9+" : cartCount}
+                  {cartCount() > 9 ? "9+" : cartCount()}
                 </span>
               )}
             </button>
@@ -284,8 +283,6 @@ export default function Header() {
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors">
                         <ShoppingBag size={14} /> My Orders
                       </Link>
-
-                      {/* ← Admin link: only renders client-side after mount */}
                       {isAdmin && (
                         <Link href="/admin" onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-4 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 transition-colors">
