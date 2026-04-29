@@ -35,7 +35,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={geist.variable}>
-      <body className="min-h-screen bg-white text-gray-900 antialiased">
+      <body className="min-h-screen bg-pink-50 text-gray-900 antialiased">
         <AuthProvider>
           <Header />
           <CartDrawer />

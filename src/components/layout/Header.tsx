@@ -4,60 +4,86 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ShoppingBag, Search, User, Menu, X,
-  ChevronDown, LogOut,
+  ShoppingBag, Search, Menu, X,
+  ChevronDown, LogOut, User, Package,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import { NAV_LINKS } from "@/config/nav";
 import toast from "react-hot-toast";
+import Image from "next/image";
+
+// Avatar: uses Google profile pic if available, else DiceBear initials
+function UserAvatar({ user, profile, size = 28 }: {
+  user: { email?: string | null };
+  profile?: { avatar_url?: string | null; full_name?: string | null } | null;
+  size?: number;
+}) {
+  const [imgError, setImgError] = useState(false);
+
+  if (profile?.avatar_url && !imgError) {
+    return (
+      <Image
+        src={profile.avatar_url}
+        alt={profile.full_name ?? "avatar"}
+        width={size}
+        height={size}
+        className="rounded-full flex-shrink-0 object-cover"
+        onError={() => setImgError(true)}
+        unoptimized
+      />
+    );
+  }
+
+  // Fallback: DiceBear initials
+  const seed = encodeURIComponent(user.email ?? "user");
+  const src  = `https://api.dicebear.com/7.x/initials/svg?seed=${seed}&backgroundColor=db2777&textColor=ffffff&fontSize=40`;
+  return (
+    <Image
+      src={src}
+      alt={user.email ?? "avatar"}
+      width={size}
+      height={size}
+      className="rounded-full flex-shrink-0"
+      unoptimized
+    />
+  );
+}
 
 export default function Header() {
-  const router = useRouter();
+  const router      = useRouter();
   const { user, profile } = useAuthStore();
-  const cartCount  = useCartStore((s) => s.count());
+  const cartCount   = useCartStore((s) => s.count());
   const setCartOpen = useCartStore((s) => s.setOpen);
 
-  const [activeMenu,   setActiveMenu]   = useState<string | null>(null);
-  const [mobileOpen,   setMobileOpen]   = useState(false);
-  const [searchOpen,   setSearchOpen]   = useState(false);
-  const [searchQuery,  setSearchQuery]  = useState("");
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [activeMenu,     setActiveMenu]     = useState<string | null>(null);
+  const [mobileOpen,     setMobileOpen]     = useState(false);
+  const [searchOpen,     setSearchOpen]     = useState(false);
+  const [searchQuery,    setSearchQuery]    = useState("");
+  const [suggestions,    setSuggestions]    = useState<{ name: string; slug: string }[]>([]);
+  const [showSug,        setShowSug]        = useState(false);
+  const [userMenuOpen,   setUserMenuOpen]   = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
 
-  const menuTimer   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const searchRef   = useRef<HTMLInputElement>(null);
-  const userBtnRef  = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const userRef   = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
 
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-
-  // ── Nav hover (with delay so it doesn't close immediately) ──
-  const openMenu  = (label: string) => {
-    if (menuTimer.current) clearTimeout(menuTimer.current);
-    setActiveMenu(label);
-  };
-  const closeMenu = () => {
-    menuTimer.current = setTimeout(() => setActiveMenu(null), 180);
-  };
-
-  // ── Search focus ──
-  useEffect(() => {
-    if (searchOpen) searchRef.current?.focus();
-  }, [searchOpen]);
-
-  // ── Close user dropdown on outside click ──
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (userBtnRef.current && !userBtnRef.current.contains(e.target as Node)) {
+      if (userRef.current && !userRef.current.contains(e.target as Node))
         setUserMenuOpen(false);
-      }
-      setActiveMenu(null);
+      if (headerRef.current && !headerRef.current.contains(e.target as Node))
+        setActiveMenu(null);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +91,15 @@ export default function Header() {
     router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     setSearchOpen(false);
     setSearchQuery("");
+    setSuggestions([]);
+  };
+
+  const fetchSuggestions = async (q: string) => {
+    if (!q.trim() || q.length < 2) { setSuggestions([]); return; }
+    const res  = await fetch(`/api/products?search=${encodeURIComponent(q)}&limit=6`);
+    const json = await res.json();
+    if (json.success)
+      setSuggestions(json.data.products.map((p: any) => ({ name: p.name, slug: p.slug })));
   };
 
   const handleSignOut = async () => {
@@ -74,329 +109,269 @@ export default function Header() {
     router.push("/");
   };
 
-  const fetchSuggestions = async (q: string) => {
-  if (!q.trim() || q.length < 2) { setSuggestions([]); return; }
-  const res  = await fetch(`/api/products?search=${encodeURIComponent(q)}&limit=5`);
-  const json = await res.json();
-  if (json.success) {
-    setSuggestions(json.data.products.map((p: any) => p.name));
-   }
-  };
-  
   const displayName = profile?.full_name?.split(" ")[0]
     || user?.email?.split("@")[0]
     || "Account";
 
-  const initial = (profile?.full_name || user?.email || "U")
-    .slice(0, 1)
-    .toUpperCase();
-
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+    <header ref={headerRef} className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center h-16 gap-3">
+        <div className="flex items-center h-14 gap-4">
 
-          {/* Logo */}
-          <Link
-            href="/"
-            className="text-xl sm:text-2xl font-bold text-pink-600 tracking-tight flex-shrink-0 mr-2"
-          >
-            SKM WARDROBE
-          </Link>
+          {/* ── Logo (left) ── */}
+          <Link href="/"
+  className="text-xl sm:text-2xl font-bold text-pink-600 tracking-tight flex-shrink-0 mr-3">
+  SKM WARDROBE
+</Link>
 
-          {/* Desktop nav — centre */}
-          <nav className="hidden md:flex items-center gap-0.5 flex-1">
-            {NAV_LINKS.map((link) => (
-              <div
-                key={link.label}
-                className="relative"
-                onMouseEnter={() => openMenu(link.label)}
-                onMouseLeave={closeMenu}
-              >
-                <Link
-                  href={link.href}
-                  className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 hover:text-pink-600 rounded-lg hover:bg-pink-50 transition-colors whitespace-nowrap"
-                >
-                  {link.label}
-                  <ChevronDown
-                    size={13}
-                    className={`transition-transform duration-200 ${activeMenu === link.label ? "rotate-180" : ""}`}
+          {/* ── Right side: Search + Nav + Cart + User ── */}
+          <div className="flex items-center gap-1 ml-auto">
+
+            {/* Search */}
+            {searchOpen ? (
+              <form onSubmit={handleSearch} className="relative flex items-center gap-1">
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      fetchSuggestions(e.target.value);
+                      setShowSug(true);
+                    }}
+                    onBlur={() => setTimeout(() => setShowSug(false), 200)}
+                    onFocus={() => suggestions.length > 0 && setShowSug(true)}
+                    onKeyDown={(e) => e.key === "Escape" && setSearchOpen(false)}
+                    placeholder="Search products..."
+                    className="w-36 sm:w-56 pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-400"
                   />
-                </Link>
+                  {showSug && suggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-[200] overflow-hidden">
+                      {suggestions.map((s, i) => (
+                        <button key={i} type="button"
+                          onMouseDown={() => {
+                            router.push(`/products/${s.slug}`);
+                            setSearchOpen(false);
+                            setSearchQuery("");
+                            setSuggestions([]);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors">
+                          <Search size={11} className="text-gray-400 flex-shrink-0" />
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button type="button"
+                  onClick={() => { setSearchOpen(false); setSearchQuery(""); setSuggestions([]); }}
+                  className="p-1.5 text-gray-400 hover:text-gray-600">
+                  <X size={15} />
+                </button>
+              </form>
+            ) : (
+              <button onClick={() => setSearchOpen(true)}
+                className="p-2 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
+                aria-label="Search">
+                <Search size={19} />
+              </button>
+            )}
 
-                {/* Mega dropdown */}
-                {activeMenu === link.label && link.categories.length > 0 && (
-                  <div
-                    className="absolute top-full left-0 pt-2 z-[100]"
-                    onMouseEnter={() => openMenu(link.label)}
-                    onMouseLeave={closeMenu}
+            {/* ── Desktop Nav links (Women, Kids, Accessories) ── */}
+            <nav className="hidden md:flex items-center gap-0.5">
+              {NAV_LINKS.map((link) => (
+                <div key={link.label} className="relative">
+                  <button
+                    onClick={() => setActiveMenu((p) => p === link.label ? null : link.label)}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-gray-700 hover:text-pink-600 rounded-lg hover:bg-pink-50 transition-colors whitespace-nowrap"
                   >
-                    <div className="bg-white border border-gray-100 rounded-2xl shadow-xl p-5 w-[420px]">
-                      <div className="grid grid-cols-3 gap-5">
+                    {link.label}
+                    <ChevronDown size={13}
+                      className={`transition-transform duration-200 ${activeMenu === link.label ? "rotate-180 text-pink-600" : ""}`}
+                    />
+                  </button>
+
+                  {activeMenu === link.label && link.categories.length > 0 && (
+                    <div className="absolute top-full right-0 mt-1 z-[100] bg-white border border-gray-100 rounded-2xl shadow-xl p-4 w-[340px]">
+                      <Link href={link.href} onClick={() => setActiveMenu(null)}
+                        className="flex items-center justify-between w-full px-3 py-2 mb-2 text-sm font-bold text-pink-600 hover:bg-pink-50 rounded-xl transition-colors border border-pink-100">
+                        View All {link.label}
+                        <ChevronDown size={12} className="-rotate-90" />
+                      </Link>
+                      <div className="grid grid-cols-2 gap-1">
                         {link.categories.map((cat) => (
                           <div key={cat.label}>
-                            <Link
-                              href={cat.href}
-                              className="block text-sm font-bold text-gray-900 hover:text-pink-600 mb-2 transition-colors"
-                            >
+                            <Link href={cat.href} onClick={() => setActiveMenu(null)}
+                              className="block px-3 py-2 text-sm font-bold text-gray-900 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors">
                               {cat.label}
                             </Link>
                             {cat.children.length > 0 && (
-                              <ul className="space-y-1.5">
+                              <div className="ml-2 mb-1">
                                 {cat.children.map((child) => (
-                                  <li key={child.label}>
-                                    <Link
-                                      href={child.href}
-                                      className="text-xs text-gray-500 hover:text-pink-600 transition-colors leading-tight block"
-                                    >
-                                      {child.label}
-                                    </Link>
-                                  </li>
+                                  <Link key={child.label} href={child.href} onClick={() => setActiveMenu(null)}
+                                    className="block px-3 py-1 text-xs text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors">
+                                    → {child.label}
+                                  </Link>
                                 ))}
-                              </ul>
+                              </div>
                             )}
                           </div>
                         ))}
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </nav>
-
-          {/* Right icons */}
-          <div className="flex items-center gap-1 ml-auto">
-
-            {/* Search */}
-{searchOpen ? (
-  <div ref={searchContainerRef} className="relative flex items-center gap-2">
-    <form onSubmit={handleSearch} className="flex items-center gap-2">
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          ref={searchRef}
-          type="text"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            fetchSuggestions(e.target.value);
-            setShowSuggestions(true);
-          }}
-          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-          placeholder="Search products..."
-          className="w-40 sm:w-60 pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-500"
-        />
-        {/* Suggestions dropdown */}
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-[200] overflow-hidden">
-            {suggestions.map((s, i) => (
-              <button
-                key={i}
-                type="button"
-                onMouseDown={() => {
-                  setSearchQuery(s);
-                  setShowSuggestions(false);
-                  router.push(`/search?q=${encodeURIComponent(s)}`);
-                  setSearchOpen(false);
-                  setSearchQuery("");
-                }}
-                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors"
-              >
-                <Search size={13} className="text-gray-400 flex-shrink-0" />
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      <button type="button"
-        onClick={() => { setSearchOpen(false); setSearchQuery(""); setSuggestions([]); }}
-        className="p-1.5 text-gray-400 hover:text-gray-600">
-        <X size={16} />
-      </button>
-    </form>
-  </div>
-) : (
-  <button onClick={() => setSearchOpen(true)}
-    className="p-2 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
-    aria-label="Search">
-    <Search size={20} />
-  </button>
-)}
+                  )}
+                </div>
+              ))}
+            </nav>
 
             {/* Cart */}
-            <button
-              onClick={() => setCartOpen(true)}
+            <button onClick={() => setCartOpen(true)}
               className="relative p-2 text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
-              aria-label="Cart"
-            >
-              <ShoppingBag size={20} />
+              aria-label="Cart">
+              <ShoppingBag size={19} />
               {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-pink-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                <span className="absolute -top-0.5 -right-0.5 bg-pink-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {cartCount > 9 ? "9+" : cartCount}
                 </span>
               )}
             </button>
 
-            {/* User */}
+            {/* User / Login */}
             {user ? (
-              <div ref={userBtnRef} className="relative">
+              <div ref={userRef} className="relative">
                 <button
                   onClick={() => setUserMenuOpen((v) => !v)}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-colors"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-full border border-gray-200 hover:border-pink-300 hover:bg-pink-50 transition-colors"
                 >
-                  <div className="w-6 h-6 bg-pink-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-[11px] font-bold leading-none">
-                      {initial}
-                    </span>
-                  </div>
-                  <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[90px] truncate">
+                  <UserAvatar user={user} profile={profile} size={26} />
+                  <span className="hidden sm:block text-xs font-semibold text-gray-700 max-w-[72px] truncate">
                     {displayName}
                   </span>
-                  <ChevronDown
-                    size={13}
-                    className={`text-gray-400 transition-transform duration-200 hidden sm:block ${userMenuOpen ? "rotate-180" : ""}`}
-                  />
+                  <ChevronDown size={11} className={`text-gray-400 hidden sm:block transition-transform ${userMenuOpen ? "rotate-180" : ""}`} />
                 </button>
 
-                {/* User dropdown */}
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-[100]">
-                    {/* Info */}
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-xs font-bold text-gray-900 truncate">
-                        {profile?.full_name || displayName}
-                      </p>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">
-                        {user.email}
-                      </p>
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                      <UserAvatar user={user} profile={profile} size={34} />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-gray-900 truncate">
+                          {profile?.full_name || displayName}
+                        </p>
+                        <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
+                      </div>
                     </div>
-
                     <div className="py-1">
-                      <Link
-                        href="/account"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors"
-                      >
-                        <User size={15} /> Profile
+                      <Link href="/account" onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors">
+                        <User size={14} /> Profile
                       </Link>
-                      <Link
-                        href="/orders"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors"
-                      >
-                        <ShoppingBag size={15} /> My Orders
+                      <Link href="/orders" onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors">
+                        <ShoppingBag size={14} /> My Orders
                       </Link>
                       {profile?.role === "admin" && (
-                        <Link
-                          href="/admin"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 transition-colors"
-                        >
-                          <span>⚙️</span> Admin Panel
+                        <Link href="/admin" onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 transition-colors">
+                          <Package size={14} /> Admin Panel
                         </Link>
                       )}
                     </div>
-
                     <div className="border-t border-gray-100 pt-1">
-                      <button
-                        onClick={handleSignOut}
-                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                      >
-                        <LogOut size={15} /> Sign out
+                      <button onClick={handleSignOut}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                        <LogOut size={14} /> Sign out
                       </button>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="ml-1 px-4 py-1.5 text-sm font-semibold text-white bg-pink-600 hover:bg-pink-700 rounded-full transition-colors"
-              >
+              <Link href="/login"
+                className="px-4 py-1.5 text-sm font-bold text-white bg-pink-600 hover:bg-pink-700 rounded-full transition-colors">
                 Login
               </Link>
             )}
 
             {/* Mobile hamburger */}
-            <button
-              onClick={() => setMobileOpen((v) => !v)}
+            <button onClick={() => setMobileOpen((v) => !v)}
               className="md:hidden p-2 text-gray-600 hover:text-pink-600 rounded-lg"
-              aria-label="Menu"
-            >
-              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+              aria-label="Menu">
+              {mobileOpen ? <X size={19} /> : <Menu size={19} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile nav */}
+      {/* ── Mobile Nav ── */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1 max-h-[80vh] overflow-y-auto">
-          {NAV_LINKS.map((link) => (
-            <div key={link.label}>
-              <Link
-                href={link.href}
-                className="block px-3 py-2 text-sm font-semibold text-gray-800 hover:text-pink-600 hover:bg-pink-50 rounded-lg"
-                onClick={() => setMobileOpen(false)}
-              >
-                {link.label}
-              </Link>
-              <div className="pl-3 space-y-0.5 mt-0.5">
-                {link.categories.map((cat) => (
-                  <div key={cat.label}>
-                    <Link
-                      href={cat.href}
-                      className="block px-3 py-1.5 text-sm text-gray-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg font-medium"
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      {cat.label}
+        <div className="md:hidden border-t border-gray-100 bg-white max-h-[80vh] overflow-y-auto">
+          <div className="px-4 py-3 space-y-1">
+            {NAV_LINKS.map((link) => (
+              <div key={link.label}>
+                <button
+                  onClick={() => setMobileExpanded((p) => p === link.label ? null : link.label)}
+                  className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-bold text-gray-800 hover:text-pink-600 hover:bg-pink-50 rounded-xl transition-colors">
+                  {link.label}
+                  <ChevronDown size={15}
+                    className={`transition-transform ${mobileExpanded === link.label ? "rotate-180 text-pink-600" : "text-gray-400"}`} />
+                </button>
+                {mobileExpanded === link.label && (
+                  <div className="ml-3 mt-1 mb-2 space-y-0.5">
+                    <Link href={link.href} onClick={() => setMobileOpen(false)}
+                      className="block px-3 py-2 text-sm text-pink-600 font-semibold hover:bg-pink-50 rounded-xl">
+                      View All {link.label}
                     </Link>
-                    {cat.children.length > 0 && (
-                      <div className="pl-3 space-y-0.5">
+                    {link.categories.map((cat) => (
+                      <div key={cat.label}>
+                        <Link href={cat.href} onClick={() => setMobileOpen(false)}
+                          className="block px-3 py-2 text-sm font-semibold text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-xl">
+                          {cat.label}
+                        </Link>
                         {cat.children.map((child) => (
-                          <Link
-                            key={child.label}
-                            href={child.href}
-                            className="block px-3 py-1 text-xs text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-lg"
-                            onClick={() => setMobileOpen(false)}
-                          >
-                            {child.label}
+                          <Link key={child.label} href={child.href} onClick={() => setMobileOpen(false)}
+                            className="block px-5 py-1.5 text-xs text-gray-500 hover:text-pink-600 hover:bg-pink-50 rounded-xl">
+                            → {child.label}
                           </Link>
                         ))}
                       </div>
-                    )}
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          ))}
-          {!user ? (
-            <Link
-              href="/login"
-              className="block px-3 py-2 text-sm font-semibold text-white bg-pink-600 rounded-lg text-center mt-2"
-              onClick={() => setMobileOpen(false)}
-            >
-              Login / Register
-            </Link>
-          ) : (
-            <div className="border-t border-gray-100 pt-2 mt-2 space-y-0.5">
-              <Link href="/account" onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 rounded-lg">
-                <User size={15} /> Profile
+            ))}
+
+            {user ? (
+              <div className="border-t border-gray-100 pt-3 mt-2 space-y-1">
+                <div className="flex items-center gap-3 px-3 py-2">
+                  <UserAvatar user={user} profile={profile} size={32} />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{displayName}</p>
+                    <p className="text-xs text-gray-400">{user.email}</p>
+                  </div>
+                </div>
+                <Link href="/account" onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 rounded-xl">
+                  <User size={14} /> Profile
+                </Link>
+                <Link href="/orders" onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 rounded-xl">
+                  <ShoppingBag size={14} /> My Orders
+                </Link>
+                <button onClick={handleSignOut}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-xl">
+                  <LogOut size={14} /> Sign out
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" onClick={() => setMobileOpen(false)}
+                className="block px-3 py-2.5 text-sm font-bold text-white bg-pink-600 rounded-xl text-center mt-3">
+                Login / Register
               </Link>
-              <Link href="/orders" onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-pink-50 rounded-lg">
-                <ShoppingBag size={15} /> My Orders
-              </Link>
-              <button onClick={handleSignOut}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg">
-                <LogOut size={15} /> Sign out
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </header>

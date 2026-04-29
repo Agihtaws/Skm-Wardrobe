@@ -54,7 +54,6 @@ export default async function HomePage() {
     <HomeClient
       sections={sections}
       carouselItems={carouselItems}
-      allTopCategories={topCategories ?? []}
     />
   );
 }

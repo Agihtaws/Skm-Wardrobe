@@ -20,185 +20,183 @@ interface Section { category: Category; products: Product[] }
 interface Props {
   sections: Section[];
   carouselItems: Category[];
-  allTopCategories: Category[];
 }
 
-// ─── Carousel ────────────────────────────────────────────────────────────────
+// ─── Hero Carousel ────────────────────────────────────────────────────────────
 function HeroCarousel({ items }: { items: Category[] }) {
   const [current, setCurrent] = useState(0);
+  const [perPage, setPerPage] = useState(5);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const total = items.length;
+  const maxSlide = Math.max(0, total - perPage);
 
-  const go = useCallback((idx: number) => {
-    setCurrent((idx + items.length) % items.length);
-  }, [items.length]);
+  useEffect(() => {
+    const update = () => {
+      if (window.innerWidth < 640) setPerPage(3);
+      else if (window.innerWidth < 1024) setPerPage(4);
+      else setPerPage(5);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const go = useCallback(
+    (idx: number) => setCurrent(Math.max(0, Math.min(idx, maxSlide))),
+    [maxSlide]
+  );
 
   const resetTimer = useCallback(() => {
     if (timer.current) clearInterval(timer.current);
-    if (items.length > 1) {
-      timer.current = setInterval(() => setCurrent((c) => (c + 1) % items.length), 4500);
+    if (total > perPage) {
+      timer.current = setInterval(() => {
+        setCurrent((c) => (c >= maxSlide ? 0 : c + 1));
+      }, 3000);
     }
-  }, [items.length]);
+  }, [total, perPage, maxSlide]);
 
   useEffect(() => {
     resetTimer();
     return () => { if (timer.current) clearInterval(timer.current); };
   }, [resetTimer]);
 
-  const handlePrev = () => { go(current - 1); resetTimer(); };
-  const handleNext = () => { go(current + 1); resetTimer(); };
-
   if (!items.length) return null;
 
   const LABELS: Record<string, string> = {
-    women: "Women's Collection", kids: "Kids' Collection", accessories: "Accessories",
+    women: "Women's",
+    kids: "Kids'",
+    accessories: "Accessories",
   };
 
+  const GAP = 10;
+
   return (
-    <div className="relative w-full overflow-hidden bg-gray-100">
-      {/* Track */}
-      <div
-        className="flex transition-transform duration-500 ease-in-out"
-        style={{ transform: `translateX(-${current * 100}%)` }}
-      >
-        {items.map((cat, i) => (
-          <Link
-            key={cat.id}
-            href={`/${cat.gender}/${cat.slug}`}
-            className="relative flex-shrink-0 w-full"
-            style={{ aspectRatio: "16/6" }}
-          >
-            <Image
-              src={cat.image_url!}
-              alt={cat.name}
-              fill
-              className="object-cover object-top"
-              priority={i === 0}
-              sizes="100vw"
-            />
-            {/* Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/20 to-transparent" />
-            {/* Text */}
-            <div className="absolute bottom-0 left-0 px-6 py-5 sm:px-12 sm:py-8 max-w-lg">
-              <p className="text-xs sm:text-sm font-bold text-pink-300 tracking-widest uppercase mb-1">
-                {LABELS[cat.gender ?? ""] ?? ""}
-              </p>
-              <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-white leading-tight">
-                {cat.name}
-              </h2>
-              <span className="inline-flex items-center gap-1.5 mt-3 px-4 py-1.5 bg-pink-600 text-white text-sm font-semibold rounded-full hover:bg-pink-700 transition-colors">
-                Shop Now <ArrowRight size={14} />
-              </span>
+    <div className="bg-pink-50 border-b border-pink-100 pt-0 pb-1">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+
+        {/* Header row with nav arrows */}
+        <div className="flex items-center justify-between mb-3">
+          {total > perPage && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => { go(current - 1); resetTimer(); }}
+                disabled={current === 0}
+                className="w-6 h-6 bg-pink-50 hover:bg-pink-600 hover:text-white border border-pink-200 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
+              >
+                <ChevronLeft size={12} />
+              </button>
+              <button
+                onClick={() => { go(current + 1); resetTimer(); }}
+                disabled={current >= maxSlide}
+                className="w-6 h-6 bg-pink-50 hover:bg-pink-600 hover:text-white border border-pink-200 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
+              >
+                <ChevronRight size={12} />
+              </button>
             </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Arrows */}
-      {items.length > 1 && (
-        <>
-          <button onClick={handlePrev}
-            className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md transition-all z-10">
-            <ChevronLeft size={18} className="text-gray-700" />
-          </button>
-          <button onClick={handleNext}
-            className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md transition-all z-10">
-            <ChevronRight size={18} className="text-gray-700" />
-          </button>
-        </>
-      )}
-
-      {/* Dots */}
-      {items.length > 1 && (
-        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
-          {items.map((_, i) => (
-            <button key={i} onClick={() => { go(i); resetTimer(); }}
-              className={cn(
-                "rounded-full transition-all",
-                i === current ? "w-6 h-2 bg-white" : "w-2 h-2 bg-white/50 hover:bg-white/80"
-              )}
-            />
-          ))}
+          )}
         </div>
-      )}
-    </div>
-  );
-}
 
-// ─── Category strip ───────────────────────────────────────────────────────────
-function CategoryStrip({ categories }: { categories: Category[] }) {
-  if (!categories.length) return null;
-
-  return (
-    <div className="bg-white border-b border-gray-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-8">
-        <div className="flex gap-4 sm:gap-6 overflow-x-auto py-4 scrollbar-hide justify-start">
-          {categories.map((cat) => (
-            <Link
-              key={cat.id}
-              href={`/${cat.gender}/${cat.slug}`}
-              className="flex flex-col items-center gap-2 flex-shrink-0 group"
-            >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-gray-100 group-hover:border-pink-500 transition-all bg-gray-50 shadow-sm flex-shrink-0">
-                {cat.image_url ? (
-                  <Image
-                    src={cat.image_url}
-                    alt={cat.name}
-                    width={80} height={80}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl bg-pink-50">
-                    {cat.gender === "women" ? "👗" : cat.gender === "kids" ? "🧒" : "👜"}
+        {/* Sliding track */}
+        <div className="overflow-hidden">
+          <div
+            className="flex transition-transform duration-500 ease-in-out"
+            style={{
+              gap: `${GAP}px`,
+              transform: `translateX(calc(-${current} * (${100 / perPage}% + ${GAP / perPage}px)))`,
+            }}
+          >
+            {items.map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/${cat.gender}/${cat.slug}`}
+                className="group flex-shrink-0"
+                style={{ width: `calc(${100 / perPage}% - ${(GAP * (perPage - 1)) / perPage}px)` }}
+              >
+                <div className="rounded-xl overflow-hidden border border-gray-100 group-hover:border-pink-300 group-hover:shadow-md transition-all duration-300 bg-white">
+                  {/* Image — 3:4 portrait, object-contain so nothing gets cut */}
+                  <div className="relative w-full bg-gray-50" style={{ aspectRatio: "3 / 5" }}>
+                    <Image
+                      src={cat.image_url!}
+                      alt={cat.name}
+                      fill
+                      className="object-contain group-hover:scale-105 transition-transform duration-500"
+                      sizes="(max-width: 640px) 50vw, 20vw"
+                    />
+                    {/* Gender badge */}
+                    {cat.gender && LABELS[cat.gender] && (
+                      <div className="absolute top-2 left-2 bg-pink-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10">
+                        {LABELS[cat.gender]}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <span className="text-xs font-semibold text-gray-700 group-hover:text-pink-600 transition-colors text-center max-w-[72px] leading-tight">
-                {cat.name}
-              </span>
-            </Link>
-          ))}
+                  {/* Name strip */}
+                  <div className="bg-white border-t border-gray-100 px-2.5 py-2">
+                    <p className="text-gray-900 font-bold text-xs leading-tight truncate">
+                      {cat.name}
+                    </p>
+                    <p className="text-pink-500 text-[10px] mt-0.5 font-medium">
+                      Shop now →
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
+
+        {/* Dots */}
+        {total > perPage && (
+          <div className="flex justify-center gap-1.5 mt-3">
+            {Array.from({ length: maxSlide + 1 }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { go(i); resetTimer(); }}
+                className={`transition-all rounded-full ${
+                  i === current
+                    ? "w-4 h-1.5 bg-pink-600"
+                    : "w-1.5 h-1.5 bg-gray-300 hover:bg-pink-300"
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── Home Product Card (with arrow navigation, no hover swap) ────────────────
+
+// ─── Home Product Card ────────────────────────────────────────────────────────
 function HomeProductCard({ product }: { product: Product }) {
   const router = useRouter();
-  const { user }  = useAuthStore();
+  const { user } = useAuthStore();
   const { addItem, items } = useCartStore();
-  const [imgIdx,  setImgIdx]  = useState(0);
-  const [adding,  setAdding]  = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
+  const [adding, setAdding] = useState(false);
 
-  const inCart     = items.some((i) => i.product_id === product.id);
-  const sellPrice  = product.sell_price ?? product.price ?? 0;
-  const regular    = product.regular_price ?? 0;
+  const inCart      = items.some((i) => i.product_id === product.id);
+  const sellPrice   = product.sell_price ?? product.price ?? 0;
+  const regular     = product.regular_price ?? 0;
   const hasDiscount = regular > 0 && regular > sellPrice;
   const hasMultiple = product.images.length > 1;
 
   const prevImg = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     setImgIdx((i) => (i - 1 + product.images.length) % product.images.length);
   };
   const nextImg = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     setImgIdx((i) => (i + 1) % product.images.length);
   };
 
   const handleCart = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
+    e.preventDefault(); e.stopPropagation();
     if (inCart) { router.push("/cart"); return; }
     if (!user) {
       toast("Please login to add to cart", { icon: "🔐" });
       router.push(`/login?next=/products/${product.slug}`);
       return;
     }
-
     setAdding(true);
     try {
       const res  = await fetch("/api/cart/add", {
@@ -217,7 +215,7 @@ function HomeProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/products/${product.slug}`}
-      className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg hover:border-pink-100 transition-all duration-200"
+      className="group flex flex-col bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg hover:border-pink-100 transition-all duration-200"
     >
       {/* Image */}
       <div className="relative bg-gray-50 overflow-hidden" style={{ aspectRatio: "3/4" }}>
@@ -229,59 +227,51 @@ function HomeProductCard({ product }: { product: Product }) {
           className="object-contain p-2 transition-transform duration-300 group-hover:scale-[1.03]"
         />
 
-        {/* Arrow buttons */}
+        {hasDiscount && (
+          <div className="absolute top-2 right-2 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10">
+            {Math.round(((regular - sellPrice) / regular) * 100)}% OFF
+          </div>
+        )}
+
         {hasMultiple && (
           <>
-            <button
-              onClick={prevImg}
-              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10"
-            >
-              <ChevronLeft size={14} className="text-gray-600" />
+            <button onClick={prevImg}
+              className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10">
+              <ChevronLeft size={12} className="text-gray-600" />
             </button>
-            <button
-              onClick={nextImg}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10"
-            >
-              <ChevronRight size={14} className="text-gray-600" />
+            <button onClick={nextImg}
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10">
+              <ChevronRight size={12} className="text-gray-600" />
             </button>
           </>
         )}
 
-        {/* Image dots */}
         {hasMultiple && (
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-10">
+          <div className="absolute bottom-1.5 left-0 right-0 flex justify-center gap-1 z-10">
             {product.images.slice(0, 5).map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "w-1.5 h-1.5 rounded-full transition-colors",
-                  i === imgIdx ? "bg-pink-500" : "bg-gray-300"
-                )}
+              <div key={i}
+                className={cn("w-1 h-1 rounded-full transition-colors",
+                  i === imgIdx ? "bg-pink-500" : "bg-gray-300")}
               />
             ))}
           </div>
         )}
       </div>
 
-      {/* Info — centred */}
-      <div className="flex flex-col items-center text-center gap-1.5 p-3 flex-1">
-        <p className="text-sm text-gray-800 font-medium leading-tight line-clamp-2 w-full">
+      {/* Info */}
+      <div className="flex flex-col items-center text-center gap-1 p-2.5 flex-1">
+        <p className="text-xs text-gray-800 font-medium leading-tight line-clamp-2 w-full">
           {product.name}
         </p>
 
-        <div className="flex items-center justify-center gap-2 flex-wrap">
+        <div className="flex items-center justify-center gap-1.5 flex-wrap mt-0.5">
           <span className="text-sm font-bold text-gray-900">
             ₹{sellPrice.toLocaleString("en-IN")}
           </span>
           {hasDiscount && (
-            <>
-              <span className="text-xs text-gray-400 line-through">
-                ₹{regular.toLocaleString("en-IN")}
-              </span>
-              <span className="text-xs text-green-600 font-semibold">
-                {Math.round(((regular - sellPrice) / regular) * 100)}% off
-              </span>
-            </>
+            <span className="text-[10px] text-gray-400 line-through">
+              ₹{regular.toLocaleString("en-IN")}
+            </span>
           )}
         </div>
 
@@ -289,18 +279,18 @@ function HomeProductCard({ product }: { product: Product }) {
           onClick={handleCart}
           disabled={adding}
           className={cn(
-            "mt-1 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-semibold transition-all",
+            "mt-1.5 flex items-center justify-center gap-1 w-full py-1.5 rounded-lg text-[11px] font-semibold transition-all",
             inCart
               ? "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
               : "bg-pink-600 hover:bg-pink-700 text-white"
           )}
         >
           {adding ? (
-            <><Loader2 size={12} className="animate-spin" /> Adding...</>
+            <><Loader2 size={11} className="animate-spin" /> Adding...</>
           ) : inCart ? (
-            <><CheckCircle size={12} /> In Cart — View</>
+            <><CheckCircle size={11} /> In Cart — View</>
           ) : (
-            <><ShoppingBag size={12} /> Add to Cart</>
+            <><ShoppingBag size={11} /> Add to Cart</>
           )}
         </button>
       </div>
@@ -315,46 +305,46 @@ function ProductSection({ section }: { section: Section }) {
   const show = products.slice(0, 8);
 
   return (
-    <section className="py-6 sm:py-8">
+    <section className="py-5 sm:py-7">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        {/* Section header */}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
             {category.image_url && (
-              <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0">
+              <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-pink-200 flex-shrink-0">
                 <Image src={category.image_url} alt={category.name}
-                  width={36} height={36} className="w-full h-full object-cover"
-                />
+                  width={32} height={32} className="w-full h-full object-cover" />
               </div>
             )}
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                {category.name} Collections
+              <h2 className="text-base sm:text-lg font-bold text-gray-900">
+                {category.name}
               </h2>
-              <p className="text-xs text-gray-400">{products.length} products</p>
+              <p className="text-[10px] text-gray-400">{products.length} products</p>
             </div>
           </div>
           <Link href={href}
-            className="flex items-center gap-1.5 text-sm text-pink-600 font-semibold hover:text-pink-700 transition-colors whitespace-nowrap">
-            View All <ArrowRight size={15} />
+            className="flex items-center gap-1 text-xs text-pink-600 font-semibold hover:text-pink-700 transition-colors whitespace-nowrap border border-pink-200 rounded-full px-3 py-1 hover:bg-pink-50">
+            View All <ArrowRight size={12} />
           </Link>
         </div>
 
-        {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-pink-500 via-pink-300 to-transparent mb-5" />
+        {/* Pink accent line */}
+        <div className="h-px bg-gradient-to-r from-pink-500 via-pink-200 to-transparent mb-4" />
 
-        {/* 4-column grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-          {show.map((product, i) => (
+        {/* Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
+          {show.map((product) => (
             <HomeProductCard key={product.id} product={product} />
           ))}
         </div>
 
         {products.length > 8 && (
-          <div className="mt-6 text-center">
+          <div className="mt-5 text-center">
             <Link href={href}
-              className="inline-flex items-center gap-2 px-7 py-2.5 border-2 border-pink-500 text-pink-600 font-semibold text-sm rounded-full hover:bg-pink-600 hover:text-white transition-all">
-              View All {category.name} <ArrowRight size={15} />
+              className="inline-flex items-center gap-2 px-6 py-2 border-2 border-pink-500 text-pink-600 font-semibold text-sm rounded-full hover:bg-pink-600 hover:text-white transition-all">
+              View All {category.name} <ArrowRight size={14} />
             </Link>
           </div>
         )}
@@ -364,31 +354,33 @@ function ProductSection({ section }: { section: Section }) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export default function HomeClient({ sections, carouselItems, allTopCategories }: Props) {
+export default function HomeClient({ sections, carouselItems }: Props) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Carousel */}
+    <div className="min-h-screen bg-pink-50">
+
+      {/* Carousel or fallback banner */}
       {carouselItems.length > 0 ? (
         <HeroCarousel items={carouselItems} />
       ) : (
         <div className="bg-gradient-to-br from-pink-50 via-white to-rose-50 border-b border-pink-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16 text-center">
-            <p className="text-sm font-bold text-pink-500 tracking-widest uppercase mb-3">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14 text-center">
+            <p className="text-xs font-bold text-pink-500 tracking-widest uppercase mb-2">
               Welcome to SKM Wardrobe
             </p>
             <h1 className="text-3xl sm:text-5xl font-bold text-gray-900 leading-tight">
-              Ethnic Wear for <span className="text-pink-600">Women & Kids</span>
+              Ethnic Wear for{" "}
+              <span className="text-pink-600">Women & Kids</span>
             </h1>
-            <p className="text-gray-500 mt-3 text-base max-w-md mx-auto">
+            <p className="text-gray-400 mt-2 text-sm max-w-sm mx-auto">
               Add category images in admin to enable the hero carousel.
             </p>
-            <div className="flex flex-wrap justify-center gap-3 mt-6">
+            <div className="flex flex-wrap justify-center gap-3 mt-5">
               <Link href="/women"
-                className="px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-full transition-colors">
+                className="px-6 py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-full transition-colors text-sm">
                 Shop Women&apos;s
               </Link>
               <Link href="/kids"
-                className="px-6 py-3 border-2 border-pink-600 text-pink-600 font-bold rounded-full hover:bg-pink-50 transition-colors">
+                className="px-6 py-2.5 border-2 border-pink-600 text-pink-600 font-bold rounded-full hover:bg-pink-50 transition-colors text-sm">
                 Shop Kids
               </Link>
             </div>
@@ -396,10 +388,8 @@ export default function HomeClient({ sections, carouselItems, allTopCategories }
         </div>
       )}
 
-      {/* Category strip */}
-      <CategoryStrip categories={allTopCategories} />
 
-      {/* Sections */}
+      {/* Product sections */}
       {sections.length === 0 ? (
         <div className="max-w-7xl mx-auto px-4 py-20 text-center">
           <p className="text-5xl mb-4">🛍️</p>
@@ -409,14 +399,12 @@ export default function HomeClient({ sections, carouselItems, allTopCategories }
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-gray-100 bg-gray-50">
+        <div className="divide-y divide-pink-100 bg-pink-50">
           {sections.map((section) => (
             <ProductSection key={section.category.id} section={section} />
           ))}
         </div>
       )}
-
-      
     </div>
   );
 }
