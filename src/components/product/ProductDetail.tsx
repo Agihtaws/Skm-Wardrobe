@@ -33,13 +33,30 @@ interface Props {
 
 function ImageGallery({ images, name }: { images: string[]; name: string }) {
   const [active, setActive] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+
+  const prev = () => setActive((i) => (i - 1 + images.length) % images.length);
+  const next = () => setActive((i) => (i + 1) % images.length);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) diff > 0 ? next() : prev();
+    touchStartX.current = null;
+  };
 
   return (
     <div className="flex flex-col gap-3">
       {/* Main image */}
       <div
-        className="relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100"
+        className="relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 select-none"
         style={{ aspectRatio: "3/4", maxHeight: "440px" }}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
         <Image
           src={images[active]}
@@ -50,10 +67,35 @@ function ImageGallery({ images, name }: { images: string[]; name: string }) {
           priority={active === 0}
         />
 
+        {/* Left / Right arrows — desktop only */}
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={prev}
+              className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full items-center justify-center shadow-md transition-all z-10"
+            >
+              <ChevronLeft size={16} className="text-gray-700" />
+            </button>
+            <button
+              onClick={next}
+              className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 hover:bg-white rounded-full items-center justify-center shadow-md transition-all z-10"
+            >
+              <ChevronRight size={16} className="text-gray-700" />
+            </button>
+          </>
+        )}
+
         {/* Counter badge */}
         {images.length > 1 && (
           <div className="absolute bottom-2.5 right-3 bg-black/40 text-white text-[11px] font-medium px-2 py-0.5 rounded-full">
             {active + 1}/{images.length}
+          </div>
+        )}
+
+        {/* Swipe hint — mobile only, fades after first image */}
+        {images.length > 1 && active === 0 && (
+          <div className="md:hidden absolute bottom-2.5 left-3 bg-black/30 text-white text-[10px] px-2 py-0.5 rounded-full">
+            Swipe ←→
           </div>
         )}
       </div>
@@ -87,6 +129,7 @@ function ImageGallery({ images, name }: { images: string[]; name: string }) {
     </div>
   );
 }
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function ProductDetail({ product, related }: Props) {
   const router       = useRouter();

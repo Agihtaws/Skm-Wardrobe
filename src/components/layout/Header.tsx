@@ -73,7 +73,7 @@ function UserAvatar({
 // ─── Header ───────────────────────────────────────────────────────────────────
 export default function Header() {
   const router = useRouter();
-  const { user, profile } = useAuthStore();
+  const { user, profile, _hasHydrated } = useAuthStore();
   const cartCount = useCartStore((s) => s.count());
   const setCartOpen = useCartStore((s) => s.setOpen);
 
@@ -85,7 +85,6 @@ export default function Header() {
   const [showSug,        setShowSug]        = useState(false);
   const [userMenuOpen,   setUserMenuOpen]   = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
-
   const searchRef = useRef<HTMLInputElement>(null);
   const userRef   = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -345,15 +344,16 @@ export default function Header() {
                       >
                         <ShoppingBag size={14} /> My Orders
                       </Link>
-                      {profile?.role === "admin" && (
-                        <Link
-                          href="/admin"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 transition-colors"
-                        >
-                          <Package size={14} /> Admin Panel
-                        </Link>
-                      )}
+                      {_hasHydrated && profile?.role === "admin" && (
+  <Link
+    href="/admin"
+    onClick={() => setUserMenuOpen(false)}
+    className="flex items-center gap-3 px-4 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 transition-colors"
+  >
+    <Package size={14} /> Admin Panel
+  </Link>
+)}
+                      
                     </div>
 
                     <div className="border-t border-gray-100 pt-1">

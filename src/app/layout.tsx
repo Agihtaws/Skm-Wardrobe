@@ -35,11 +35,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={geist.variable}>
-      <body className="min-h-screen bg-pink-50 text-gray-900 antialiased">
+      <body className="min-h-screen bg-pink-50 text-gray-900 antialiased flex flex-col">
         <AuthProvider>
           <Header />
           <CartDrawer />
-          <main>{children}</main>
+          <main className="flex-1">{children}</main>
           <Footer />
           <Toaster
             position="top-center"
