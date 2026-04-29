@@ -14,6 +14,7 @@ import { useAuthStore } from "@/store/auth.store";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/types/database";
+import { useCartStore } from "@/store/cart.store";
 
 const INDIAN_STATES = [
   "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
@@ -39,7 +40,8 @@ interface Props {
 
 export default function ProfileClient({ user, initialProfile, initialAddresses }: Props) {
   const router = useRouter();
-  const { setProfile } = useAuthStore();
+  const { setProfile, clear } = useAuthStore();
+  const { clear: clearCart }  = useCartStore();
 
   const [activeTab, setActiveTab]   = useState<"profile" | "addresses">("profile");
   const [addresses, setAddresses]   = useState<Address[]>(initialAddresses);
@@ -107,10 +109,12 @@ export default function ProfileClient({ user, initialProfile, initialAddresses }
   };
 
   const handleSignOut = async () => {
-    await createClient().auth.signOut();
-    router.push("/");
-    toast.success("Signed out");
-  };
+  await createClient().auth.signOut();
+  clear();      // immediately wipes user + profile from Zustand
+  clearCart();  // immediately wipes cart from memory
+  router.push("/");
+  toast.success("Signed out");
+};
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
