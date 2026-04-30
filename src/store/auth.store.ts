@@ -12,11 +12,11 @@ interface AuthState {
   clear:      () => void;
 }
 
-// NO persist — this was causing stale admin role to stay after logout
+// No persist — removed to fix stale admin role surviving logout
 export const useAuthStore = create<AuthState>()((set) => ({
-  user:      null,
-  profile:   null,
-  isLoading: true,
+  user:       null,
+  profile:    null,
+  isLoading:  true,
   setUser:    (user)      => set({ user }),
   setProfile: (profile)   => set({ profile }),
   setLoading: (isLoading) => set({ isLoading }),

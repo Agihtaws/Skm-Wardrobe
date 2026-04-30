@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { useAuthStore } from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
-import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 
 export default function AuthProvider({
   children,
@@ -12,9 +12,13 @@ export default function AuthProvider({
   children: React.ReactNode;
 }) {
   const { setUser, setProfile, setLoading, clear } = useAuthStore();
-  const { setItems, clear: clearCart } = useCartStore();
+  const { setItems, clear: clearCart }             = useCartStore();
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("skm-auth");
+    }
+
     const supabase = createClient();
 
     const fetchProfile = async (userId: string) => {
@@ -37,7 +41,6 @@ export default function AuthProvider({
       if (data && data.length > 0) setItems(data);
     };
 
-    // Initial load
     supabase.auth.getUser().then(({ data: { user } }: { data: { user: User | null } }) => {
       setUser(user);
       if (user) {
@@ -47,23 +50,20 @@ export default function AuthProvider({
       setLoading(false);
     });
 
-    // Auth state changes (login, logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        const user = session?.user ?? null;
-        setUser(user);
-
-        if (user) {
-          await fetchProfile(user.id);
-          await fetchCart(user.id);
-        } else {
-          // Clear everything on sign out
-          clear();
-          clearCart();
-        }
-        setLoading(false);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+      const user = session?.user ?? null;
+      setUser(user);
+      if (user) {
+        await fetchProfile(user.id);
+        await fetchCart(user.id);
+      } else {
+        clear();
+        clearCart();
       }
-    );
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
