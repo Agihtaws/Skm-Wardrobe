@@ -2,8 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED_ROUTES = ["/checkout", "/orders", "/account", "/wishlist"];
-const ADMIN_ROUTES = ["/admin"];
-const AUTH_ROUTES = ["/login", "/register"];
+const ADMIN_ROUTES     = ["/admin"];
+const AUTH_ROUTES      = ["/login", "/register"];
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -31,6 +31,9 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
+
+  // ── Forward pathname so root layout can read it in Server Components ──
+  supabaseResponse.headers.set("x-pathname", path);
 
   if (user && AUTH_ROUTES.some((r) => path.startsWith(r))) {
     return NextResponse.redirect(new URL("/", request.url));

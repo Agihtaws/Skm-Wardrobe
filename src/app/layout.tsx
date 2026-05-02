@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Toaster } from "react-hot-toast";
+import { headers } from "next/headers";
 import AuthProvider from "@/components/providers/AuthProvider";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -28,27 +29,31 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const isAdmin  = pathname.startsWith("/admin");
+
   return (
     <html lang="en" className={geist.variable}>
       <body className="min-h-screen bg-pink-50 text-gray-900 antialiased flex flex-col">
         <AuthProvider>
-          <Header />
-          <CartDrawer />
+          {/* Store chrome — hidden on all /admin/* pages */}
+          {!isAdmin && <Header />}
+          {!isAdmin && <CartDrawer />}
+
           <main className="flex-1">{children}</main>
-          <Footer />
+
+          {!isAdmin && <Footer />}
+
           <Toaster
             position="top-center"
             toastOptions={{
               duration: 3000,
-              style: {
-                borderRadius: "8px",
-                fontSize:     "14px",
-              },
+              style: { borderRadius: "8px", fontSize: "14px" },
             }}
           />
         </AuthProvider>
