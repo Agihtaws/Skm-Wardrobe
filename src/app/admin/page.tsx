@@ -51,22 +51,23 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5 sm:mb-6">
+    <div className="p-3 sm:p-5 lg:p-6 max-w-6xl">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5 sm:mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500 mt-0.5">SKM Wardrobe overview</p>
         </div>
         <Link
           href="/admin/products/new"
-          className="px-3 py-2 sm:px-4 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+          className="inline-flex items-center justify-center px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium rounded-lg transition-colors"
         >
           + Add Product
         </Link>
       </div>
 
-      {/* Stats grid — 2 cols on mobile, 4 on desktop */}
+      {/* ── Stats grid — 2 cols on mobile, 4 on lg ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-5 sm:mb-6">
         {STATS.map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
@@ -79,7 +80,7 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Low stock warning */}
+      {/* ── Low stock warning ── */}
       {(lowStock ?? 0) > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 sm:px-5 py-3 mb-5 sm:mb-6 flex items-center justify-between gap-3">
           <p className="text-sm text-amber-800 font-medium">
@@ -87,14 +88,14 @@ export default async function DashboardPage() {
           </p>
           <Link
             href="/admin/products?filter=low_stock"
-            className="text-xs text-amber-700 font-semibold hover:underline whitespace-nowrap"
+            className="shrink-0 text-xs text-amber-700 font-semibold hover:underline"
           >
             View →
           </Link>
         </div>
       )}
 
-      {/* Recent orders */}
+      {/* ── Recent orders ── */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">Recent Orders</h2>
@@ -106,8 +107,9 @@ export default async function DashboardPage() {
         {!orders?.length ? (
           <p className="text-center text-gray-400 text-sm py-10">No orders yet</p>
         ) : (
+          /* Horizontal scroll on mobile so table never wraps awkwardly */
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[480px]">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {["Order ID", "Status", "Amount", "Date", ""].map((h) => (
@@ -126,8 +128,8 @@ export default async function DashboardPage() {
                     <td className="px-4 sm:px-5 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
                       #{o.id.slice(0, 8)}
                     </td>
-                    <td className="px-4 sm:px-5 py-3">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_BADGE[o.status] ?? "bg-gray-100 text-gray-600"}`}>
+                    <td className="px-4 sm:px-5 py-3 whitespace-nowrap">
+                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[o.status] ?? "bg-gray-100 text-gray-600"}`}>
                         {o.status}
                       </span>
                     </td>
@@ -135,12 +137,10 @@ export default async function DashboardPage() {
                       ₹{Number(o.total).toLocaleString("en-IN")}
                     </td>
                     <td className="px-4 sm:px-5 py-3 text-gray-500 whitespace-nowrap">
-                      {new Date(o.created_at).toLocaleDateString("en-IN", {
-                        day: "2-digit", month: "short", year: "numeric",
-                      })}
+                      {new Date(o.created_at).toLocaleDateString("en-IN")}
                     </td>
                     <td className="px-4 sm:px-5 py-3">
-                      <Link href={`/admin/orders/${o.id}`} className="text-pink-600 text-xs font-medium hover:underline">
+                      <Link href={`/admin/orders/${o.id}`} className="text-pink-600 text-xs hover:underline">
                         View
                       </Link>
                     </td>

@@ -6,15 +6,15 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  requested: { label: "Requested",  color: "bg-orange-100 text-orange-700" },
-  approved:  { label: "Approved",   color: "bg-blue-100 text-blue-700"    },
-  picked:    { label: "Picked up",  color: "bg-purple-100 text-purple-700"},
-  refunded:  { label: "Refunded",   color: "bg-green-100 text-green-700"  },
-  rejected:  { label: "Rejected",   color: "bg-red-100 text-red-600"      },
+  requested: { label: "Requested", color: "bg-orange-100 text-orange-700"  },
+  approved:  { label: "Approved",  color: "bg-blue-100 text-blue-700"      },
+  picked:    { label: "Picked up", color: "bg-purple-100 text-purple-700"  },
+  refunded:  { label: "Refunded",  color: "bg-green-100 text-green-700"    },
+  rejected:  { label: "Rejected",  color: "bg-red-100 text-red-600"        },
 };
 
 export default function ReturnsClient({ initialReturns }: { initialReturns: any[] }) {
-  const [returns, setReturns] = useState(initialReturns);
+  const [returns, setReturns]   = useState(initialReturns);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const updateStatus = async (id: string, status: string) => {
@@ -28,56 +28,62 @@ export default function ReturnsClient({ initialReturns }: { initialReturns: any[
     setUpdating(null);
 
     if (!json.success) { toast.error(json.error); return; }
-    setReturns((prev) =>
-      prev.map((r) => r.id === id ? { ...r, status } : r)
-    );
+    setReturns((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
     toast.success(`Status updated to ${status}`);
   };
 
   return (
-    <div className="p-6 max-w-5xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Return Requests</h1>
+    <div className="p-3 sm:p-5 lg:p-6 max-w-5xl">
+
+      {/* ── Header ── */}
+      <div className="mb-5 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Return Requests</h1>
         <p className="text-sm text-gray-500 mt-0.5">{returns.length} requests</p>
       </div>
 
       {returns.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center">
+        <div className="bg-white rounded-2xl border border-gray-100 p-12 sm:p-16 text-center">
           <RotateCcw size={40} className="mx-auto text-gray-200 mb-3" />
           <p className="text-gray-500 font-medium">No return requests yet</p>
         </div>
       ) : (
         <div className="space-y-4">
           {returns.map((ret) => {
-            const sc = STATUS_CONFIG[ret.status] ?? STATUS_CONFIG.requested;
+            const sc    = STATUS_CONFIG[ret.status] ?? STATUS_CONFIG.requested;
             const order = ret.order;
             const addr  = order?.address;
 
             return (
               <div key={ret.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between flex-wrap gap-3">
-                  <div>
+
+                {/* ── Card header ── */}
+                <div className="px-4 sm:px-5 py-4 border-b border-gray-100 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
                     <p className="font-mono text-xs text-gray-400 mb-1">
                       #{ret.id.slice(0, 8).toUpperCase()} · Order #{order?.id?.slice(0, 8).toUpperCase()}
                     </p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 truncate">
                       {addr?.full_name} — {addr?.phone}
                     </p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {addr?.city}, {addr?.state} {addr?.pincode}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+
+                  {/* Status badge + amount — side-by-side even on mobile */}
+                  <div className="flex items-center gap-3 shrink-0">
                     <span className={cn("text-xs font-semibold px-3 py-1 rounded-full", sc.color)}>
                       {sc.label}
                     </span>
-                    <span className="font-bold text-gray-900">
+                    <span className="font-bold text-gray-900 whitespace-nowrap">
                       ₹{Number(ret.refund_amount ?? order?.total ?? 0).toLocaleString("en-IN")}
                     </span>
                   </div>
                 </div>
 
-                <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* ── Card body ── */}
+                <div className="px-4 sm:px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+
                   {/* Items */}
                   <div>
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Items</p>
@@ -103,8 +109,8 @@ export default function ReturnsClient({ initialReturns }: { initialReturns: any[
                   </div>
                 </div>
 
-                {/* Action buttons */}
-                <div className="px-5 pb-4 flex flex-wrap gap-2">
+                {/* ── Action buttons ── */}
+                <div className="px-4 sm:px-5 pb-4 flex flex-wrap gap-2">
                   {ret.status === "requested" && (
                     <>
                       <button
@@ -112,7 +118,9 @@ export default function ReturnsClient({ initialReturns }: { initialReturns: any[
                         disabled={updating === ret.id}
                         className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg disabled:opacity-60"
                       >
-                        {updating === ret.id ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
+                        {updating === ret.id
+                          ? <Loader2 size={13} className="animate-spin" />
+                          : <CheckCircle size={13} />}
                         Approve Return
                       </button>
                       <button
@@ -124,22 +132,28 @@ export default function ReturnsClient({ initialReturns }: { initialReturns: any[
                       </button>
                     </>
                   )}
+
                   {ret.status === "approved" && (
                     <button
                       onClick={() => updateStatus(ret.id, "picked")}
                       disabled={updating === ret.id}
                       className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg disabled:opacity-60"
                     >
+                      {updating === ret.id && <Loader2 size={13} className="animate-spin" />}
                       Mark Picked Up
                     </button>
                   )}
+
                   {ret.status === "picked" && (
                     <button
                       onClick={() => updateStatus(ret.id, "refunded")}
                       disabled={updating === ret.id}
                       className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg disabled:opacity-60"
                     >
-                      <CheckCircle size={13} /> Mark Refunded
+                      {updating === ret.id
+                        ? <Loader2 size={13} className="animate-spin" />
+                        : <CheckCircle size={13} />}
+                      Mark Refunded
                     </button>
                   )}
                 </div>

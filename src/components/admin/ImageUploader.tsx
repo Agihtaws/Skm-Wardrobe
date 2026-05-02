@@ -53,7 +53,6 @@ export default function ImageUploader({ images, onChange }: Props) {
 
     setUploading(false);
     setProgress(0);
-    // Reset file input
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -64,7 +63,6 @@ export default function ImageUploader({ images, onChange }: Props) {
 
   const removeImage = async (url: string, index: number) => {
     onChange(images.filter((_, i) => i !== index));
-    // Delete from storage
     const pathMatch = url.match(/\/products\/(.+)$/);
     if (pathMatch?.[1]) {
       await fetch(`/api/admin/upload/${encodeURIComponent(pathMatch[1])}`, {
@@ -87,7 +85,7 @@ export default function ImageUploader({ images, onChange }: Props) {
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         onClick={() => !uploading && inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors mb-4 ${
+        className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center transition-colors mb-4 ${
           uploading
             ? "border-pink-300 bg-pink-50 cursor-wait"
             : "border-gray-200 hover:border-pink-300 hover:bg-pink-50 cursor-pointer"
@@ -122,15 +120,15 @@ export default function ImageUploader({ images, onChange }: Props) {
               Click or drag images here
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              PNG, JPG, WEBP — up to 5MB each — any size, shown full
+              PNG, JPG, WEBP — up to 5MB each
             </p>
           </>
         )}
       </div>
 
-      {/* Image grid */}
+      {/* Image grid — 2 cols on mobile, 3 on sm, 4 on lg */}
       {images.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
           {images.map((url, index) => (
             <div
               key={`${url}-${index}`}
@@ -142,8 +140,7 @@ export default function ImageUploader({ images, onChange }: Props) {
                 </div>
               )}
 
-              {/* Full image — object-contain */}
-              <div className="h-44 flex items-center justify-center bg-gray-50 p-2">
+              <div className="h-32 sm:h-44 flex items-center justify-center bg-gray-50 p-2">
                 <img
                   src={url}
                   alt={`Product image ${index + 1}`}
@@ -151,7 +148,7 @@ export default function ImageUploader({ images, onChange }: Props) {
                 />
               </div>
 
-              {/* Hover actions */}
+              {/* Hover / tap actions */}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 {index !== 0 && (
                   <button

@@ -17,8 +17,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-      {/* pt-14 = height of mobile top bar; md:pt-0 = desktop has no top bar */}
-      <main className="flex-1 min-w-0 overflow-auto pt-14 md:pt-0">
+      {/*
+        pt-14 clears the fixed mobile top bar (h-14).
+        lg:pt-0 — on desktop the sidebar is static so no top bar exists.
+      */}
+      <main className="flex-1 min-w-0 overflow-auto pt-14 lg:pt-0">
         {children}
       </main>
     </div>

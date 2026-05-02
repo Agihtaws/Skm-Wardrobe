@@ -25,7 +25,6 @@ export default function ProductForm({ product, categories, attributes }: Props) 
 
   const [saving, setSaving] = useState(false);
 
-  // Form state
   const [name, setName]               = useState(product?.name ?? "");
   const [slug, setSlug]               = useState(product?.slug ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
@@ -46,11 +45,9 @@ export default function ProductForm({ product, categories, attributes }: Props) 
     })) ?? []
   );
 
-  // For adding a new attribute entry
   const [newAttrId, setNewAttrId]   = useState("");
   const [newValueId, setNewValueId] = useState("");
 
-  // Cascading category: initialize parentCatId from product
   useEffect(() => {
     if (product?.category_id) {
       const cat = categories.find((c) => c.id === product.category_id);
@@ -63,15 +60,13 @@ export default function ProductForm({ product, categories, attributes }: Props) 
     }
   }, []);
 
-  // Derived
-  const rootCategories = categories.filter((c) => c.gender === gender && !c.parent_id);
-  const subCategories  = parentCatId ? categories.filter((c) => c.parent_id === parentCatId) : [];
+  const rootCategories  = categories.filter((c) => c.gender === gender && !c.parent_id);
+  const subCategories   = parentCatId ? categories.filter((c) => c.parent_id === parentCatId) : [];
   const finalCategoryId = categoryId || parentCatId;
 
-  // Price calculations
-  const sp  = parseFloat(sellPrice) || 0;
-  const rp  = parseFloat(regularPrice) || 0;
-  const gst = sp > 0 ? Math.round(sp * (GST_RATE / 100)) : 0;
+  const sp    = parseFloat(sellPrice) || 0;
+  const rp    = parseFloat(regularPrice) || 0;
+  const gst   = sp > 0 ? Math.round(sp * (GST_RATE / 100)) : 0;
   const total = sp + gst + SHIPPING_CHARGE;
 
   const handleNameChange = (val: string) => {
@@ -100,10 +95,10 @@ export default function ProductForm({ product, categories, attributes }: Props) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!finalCategoryId)     { toast.error("Select a category"); return; }
-    if (!sellPrice)           { toast.error("Enter sell price"); return; }
-    if (stock === "")         { toast.error("Enter stock quantity"); return; }
-    if (images.length === 0)  { toast.error("Add at least one image"); return; }
+    if (!finalCategoryId)    { toast.error("Select a category"); return; }
+    if (!sellPrice)          { toast.error("Enter sell price"); return; }
+    if (stock === "")        { toast.error("Enter stock quantity"); return; }
+    if (images.length === 0) { toast.error("Add at least one image"); return; }
 
     setSaving(true);
 
@@ -113,7 +108,7 @@ export default function ProductForm({ product, categories, attributes }: Props) 
       category_id: finalCategoryId,
       regular_price: parseFloat(regularPrice) || parseFloat(sellPrice),
       sell_price: parseFloat(sellPrice),
-      price: parseFloat(sellPrice), // keep for backward compat
+      price: parseFloat(sellPrice),
       gst_rate: GST_RATE,
       shipping_charge: SHIPPING_CHARGE,
       stock: parseInt(stock),
@@ -144,85 +139,114 @@ export default function ProductForm({ product, categories, attributes }: Props) 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 max-w-5xl space-y-6">
-      <div className="flex items-center justify-between">
+    /* Mobile: add top padding to clear the sticky top bar */
+    <form onSubmit={handleSubmit} className="p-3 sm:p-5 lg:p-6 pt-16 lg:pt-6 max-w-5xl space-y-5">
+
+      {/* ── Page header ── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
             {isEdit ? "Edit Product" : "Add New Product"}
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {isEdit ? product.name : "Fill all required fields"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button type="button" onClick={() => router.back()}
-            className="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50"
+
+        {/* Action buttons — full-width on mobile, auto on larger */}
+        <div className="flex gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="flex-1 sm:flex-none px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50"
           >
             Cancel
           </button>
-          <button type="submit" disabled={saving}
-            className="px-5 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium rounded-lg disabled:opacity-60"
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 sm:flex-none px-5 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium rounded-lg disabled:opacity-60"
           >
-            {saving ? "Saving..." : isEdit ? "Update Product" : "Create Product"}
+            {saving ? "Saving…" : isEdit ? "Update Product" : "Create Product"}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT: Main info */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* ── Body grid ── */}
+      {/* On mobile everything stacks. On lg the right rail floats alongside. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-          {/* Basic info */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-4">
+        {/* LEFT: main info */}
+        <div className="lg:col-span-2 space-y-5">
+
+          {/* Basic Information */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 space-y-4">
             <h2 className="font-semibold text-gray-800">Basic Information</h2>
+
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Product name *</label>
-              <input required value={name} onChange={(e) => handleNameChange(e.target.value)}
+              <input
+                required
+                value={name}
+                onChange={(e) => handleNameChange(e.target.value)}
                 placeholder="e.g. Umbrella Kurtis White Pink"
                 className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
               />
             </div>
+
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Slug (URL)</label>
-              <input value={slug} onChange={(e) => setSlug(e.target.value)}
+              <input
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
                 className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono"
               />
-              <p className="text-xs text-gray-400 mt-1">skmwardrobe.in/products/{slug || "auto-generated"}</p>
+              <p className="text-xs text-gray-400 mt-1 break-all">
+                skmwardrobe.in/products/{slug || "auto-generated"}
+              </p>
             </div>
+
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)}
-                rows={4} placeholder="Product description..."
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+                placeholder="Product description…"
                 className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 resize-none"
               />
             </div>
           </div>
 
           {/* Images */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
             <h2 className="font-semibold text-gray-800 mb-1">Product Images *</h2>
-            <p className="text-xs text-gray-400 mb-4">First image = main thumbnail. All images shown full (not cropped).</p>
+            <p className="text-xs text-gray-400 mb-4">
+              First image = main thumbnail. All images shown full (not cropped).
+            </p>
             <ImageUploader images={images} onChange={setImages} />
           </div>
 
           {/* Attributes */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
             <h2 className="font-semibold text-gray-800 mb-1">Attributes</h2>
             <p className="text-xs text-gray-400 mb-4">
-              Add Color, Fabric, Neck, Size etc. Used for related products and filtering.
+              Add Color, Fabric, Neck, Size etc.
             </p>
 
-            {/* Existing entries */}
             {attrEntries.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
                 {attrEntries.map((entry, idx) => {
                   const { attr, value } = getAttrLabel(entry);
                   return (
-                    <span key={idx}
+                    <span
+                      key={idx}
                       className="inline-flex items-center gap-2 px-3 py-1.5 bg-pink-50 text-pink-700 border border-pink-200 text-sm rounded-full"
                     >
                       <span className="font-medium">{attr}:</span> {value}
-                      <button type="button" onClick={() => removeAttrEntry(idx)}
+                      <button
+                        type="button"
+                        onClick={() => removeAttrEntry(idx)}
                         className="text-pink-400 hover:text-pink-700"
                       >
                         <X size={13} />
@@ -233,11 +257,12 @@ export default function ProductForm({ product, categories, attributes }: Props) 
               </div>
             )}
 
-            {/* Add attribute row */}
-            <div className="flex flex-wrap gap-2 items-end">
-              <div className="flex-1 min-w-[140px]">
+            {/* Add attribute row — stacks vertically on mobile */}
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:items-end">
+              <div className="flex-1 min-w-0 sm:min-w-[140px]">
                 <label className="block text-xs text-gray-500 mb-1">Attribute</label>
-                <select value={newAttrId}
+                <select
+                  value={newAttrId}
                   onChange={(e) => { setNewAttrId(e.target.value); setNewValueId(""); }}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                 >
@@ -247,9 +272,12 @@ export default function ProductForm({ product, categories, attributes }: Props) 
                   ))}
                 </select>
               </div>
-              <div className="flex-1 min-w-[140px]">
+
+              <div className="flex-1 min-w-0 sm:min-w-[140px]">
                 <label className="block text-xs text-gray-500 mb-1">Value</label>
-                <select value={newValueId} onChange={(e) => setNewValueId(e.target.value)}
+                <select
+                  value={newValueId}
+                  onChange={(e) => setNewValueId(e.target.value)}
                   disabled={!newAttrId}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 disabled:opacity-50"
                 >
@@ -259,8 +287,11 @@ export default function ProductForm({ product, categories, attributes }: Props) 
                   ))}
                 </select>
               </div>
-              <button type="button" onClick={addAttrEntry}
-                className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+
+              <button
+                type="button"
+                onClick={addAttrEntry}
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
               >
                 <Plus size={15} /> Add
               </button>
@@ -273,16 +304,17 @@ export default function ProductForm({ product, categories, attributes }: Props) 
           </div>
         </div>
 
-        {/* RIGHT: Category, Pricing, Stock, Status */}
-        <div className="space-y-5">
+        {/* RIGHT rail: Category, Pricing, Stock, Status */}
+        <div className="space-y-4">
 
           {/* Category */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-3">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 space-y-3">
             <h2 className="font-semibold text-gray-800">Category *</h2>
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Section</label>
-              <select value={gender}
+              <select
+                value={gender}
                 onChange={(e) => { setGender(e.target.value); setParentCatId(""); setCategoryId(""); }}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
               >
@@ -294,7 +326,8 @@ export default function ProductForm({ product, categories, attributes }: Props) 
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Main category</label>
-              <select value={parentCatId}
+              <select
+                value={parentCatId}
                 onChange={(e) => { setParentCatId(e.target.value); setCategoryId(""); }}
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
               >
@@ -310,7 +343,9 @@ export default function ProductForm({ product, categories, attributes }: Props) 
                 <label className="block text-xs font-medium text-gray-600 mb-1">
                   Sub category <span className="text-gray-400">(optional)</span>
                 </label>
-                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                 >
                   <option value="">— All {rootCategories.find((c) => c.id === parentCatId)?.name} —</option>
@@ -329,31 +364,35 @@ export default function ProductForm({ product, categories, attributes }: Props) 
           </div>
 
           {/* Pricing */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-3">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 space-y-3">
             <h2 className="font-semibold text-gray-800">Pricing</h2>
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 Regular price / MRP (₹) <span className="text-gray-400">shown striked</span>
               </label>
-              <input type="number" min="0" step="0.01" value={regularPrice}
+              <input
+                type="number" min="0" step="0.01"
+                value={regularPrice}
                 onChange={(e) => setRegularPrice(e.target.value)}
                 placeholder="e.g. 560"
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
               />
             </div>
+
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
                 Sell price (₹) * <span className="text-gray-400">actual selling price</span>
               </label>
-              <input required type="number" min="0" step="0.01" value={sellPrice}
+              <input
+                required type="number" min="0" step="0.01"
+                value={sellPrice}
                 onChange={(e) => setSellPrice(e.target.value)}
                 placeholder="e.g. 349"
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
               />
             </div>
 
-            {/* Price preview */}
             {sp > 0 && (
               <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-xs">
                 <p className="font-semibold text-gray-600 mb-2">Customer sees at checkout:</p>
@@ -379,9 +418,11 @@ export default function ProductForm({ product, categories, attributes }: Props) 
           </div>
 
           {/* Stock */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
             <h2 className="font-semibold text-gray-800 mb-3">Stock</h2>
-            <input required type="number" min="0" value={stock}
+            <input
+              required type="number" min="0"
+              value={stock}
               onChange={(e) => setStock(e.target.value)}
               placeholder="e.g. 10"
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -392,7 +433,7 @@ export default function ProductForm({ product, categories, attributes }: Props) 
           </div>
 
           {/* Status */}
-          <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="font-semibold text-gray-800">Status</h2>
@@ -400,10 +441,13 @@ export default function ProductForm({ product, categories, attributes }: Props) 
                   {isActive ? "Visible on website" : "Hidden from website"}
                 </p>
               </div>
-              <button type="button" onClick={() => setIsActive((v) => !v)}
+              <button
+                type="button"
+                onClick={() => setIsActive((v) => !v)}
                 className={`relative w-11 h-6 rounded-full transition-colors ${isActive ? "bg-pink-600" : "bg-gray-300"}`}
               >
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${isActive ? "left-5.5" : "left-0.5"}`}
+                <span
+                  className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all"
                   style={{ left: isActive ? "22px" : "2px" }}
                 />
               </button>
