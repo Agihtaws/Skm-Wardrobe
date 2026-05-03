@@ -334,7 +334,7 @@ export default function Header() {
 
       {/* Mobile Nav */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white max-h-[80vh] overflow-y-auto">
+  <div className="md:hidden fixed top-14 left-0 right-0 border-t border-gray-100 bg-white max-h-[80vh] overflow-y-auto shadow-xl z-40">
           <div className="px-4 py-3 space-y-1">
             {NAV_LINKS.map((link) => (
               <div key={link.label}>
@@ -372,16 +372,7 @@ export default function Header() {
             ))}
 
             {/* Mobile user section — Profile/Orders/SignOut removed; use avatar dropdown instead */}
-{user ? (
-  isAdmin ? (
-    <div className="border-t border-gray-100 pt-3 mt-2 space-y-1">
-      <Link href="/admin" onClick={() => setMobileOpen(false)}
-        className="flex items-center gap-3 px-3 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 rounded-xl">
-        <Package size={15} /> Admin Panel
-      </Link>
-    </div>
-  ) : null
-) : (
+{!user && (
   <Link href="/login" onClick={() => setMobileOpen(false)}
     className="block px-3 py-2.5 text-sm font-bold text-white bg-pink-600 rounded-xl text-center mt-3">
     Login / Register
