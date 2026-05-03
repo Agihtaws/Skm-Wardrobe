@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { useAuthStore } from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 
@@ -25,10 +25,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           .eq("id", userId)
           .single();
         if (error) {
-          console.error("[AuthProvider] profile fetch error:", error.message);
+          console.error("[AuthProvider] profile fetch error:", error.message, error.code);
           return;
         }
-        if (data) setProfile(data);
+        if (data) {
+          console.log("[AuthProvider] profile loaded:", data);
+          setProfile(data);
+        }
       } catch (e) {
         console.error("[AuthProvider] profile fetch threw:", e);
       }
@@ -47,24 +50,17 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       }
     };
 
-    // ── Initial load ──
-    // CRITICAL: await both fetches before setLoading(false) so the Header
-    // renders with profile.role already set — otherwise isAdmin is false
-    // on first render and sometimes never flips to true.
-    supabase.auth.getUser().then(async ({ data: { user } }: { data: { user: User | null } }) => {
-      setUser(user);
-      if (user) {
-        await fetchProfile(user.id);
-        await fetchCart(user.id);
-      }
-      setLoading(false);  // ← now fires AFTER profile is in the store
-    });
-
-    // ── Ongoing auth changes ──
+    // onAuthStateChange fires INITIAL_SESSION immediately on mount —
+    // no need for a separate getUser() call.
+    // Having BOTH causes two concurrent fetchProfile calls which deadlocks
+    // the Supabase browser client.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
+        console.log("[AuthProvider] onAuthStateChange event:", event, "user:", session?.user?.id ?? null);
+
         const user = session?.user ?? null;
         setUser(user);
+
         if (user) {
           await fetchProfile(user.id);
           await fetchCart(user.id);
@@ -72,6 +68,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           clear();
           clearCart();
         }
+
         setLoading(false);
       }
     );
