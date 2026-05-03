@@ -15,17 +15,32 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: {
-    default:  "SKM Wardrobe",
+    default:  "SKM Wardrobe — Ethnic Wear for Women & Kids",
     template: "%s | SKM Wardrobe",
   },
   description:
-    "Shop women's sarees, kurtis, kids wear and accessories at SKM Wardrobe.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://skmwardrobe.in"
-  ),
+    "Shop women's sarees, kurtis, chudidars, kids ethnic wear and accessories at SKM Wardrobe. Quality ethnic clothing from Thanjavur. ₹40 flat shipping across India.",
+  metadataBase: new URL("https://skmwardrobe.in"),
+  keywords: [
+    "sarees online", "kurtis online", "ethnic wear", "cotton sarees",
+    "silk sarees", "kids ethnic wear", "women clothing india",
+    "SKM Wardrobe", "Thanjavur sarees",
+  ],
   openGraph: {
-    siteName: "SKM Wardrobe",
-    type:     "website",
+    siteName:    "SKM Wardrobe",
+    type:        "website",
+    locale:      "en_IN",
+    url:         "https://skmwardrobe.in",
+    title:       "SKM Wardrobe — Ethnic Wear for Women & Kids",
+    description: "Quality sarees, kurtis and ethnic wear. Free shipping above ₹599.",
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card:  "summary_large_image",
+    title: "SKM Wardrobe",
+  },
+  alternates: {
+    canonical: "https://skmwardrobe.in",
   },
 };
 
