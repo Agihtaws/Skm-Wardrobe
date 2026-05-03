@@ -7,7 +7,7 @@ import {
   ShoppingBag, Search, Menu, X,
   ChevronDown, LogOut, User, Package,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, resetClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
 import { useCartStore } from "@/store/cart.store";
 import { NAV_LINKS } from "@/config/nav";
@@ -55,8 +55,8 @@ function UserAvatar({
 
 export default function Header() {
   const router  = useRouter();
-  const { user, profile, clear }                              = useAuthStore();
-  const { count: cartCount, setOpen: setCartOpen, clear: clearCartStore } = useCartStore();
+  const { user, profile, clear }                                            = useAuthStore();
+  const { count: cartCount, setOpen: setCartOpen, clear: clearCartStore }  = useCartStore();
 
   const [mounted,        setMounted]        = useState(false);
   const [activeMenu,     setActiveMenu]     = useState<string | null>(null);
@@ -107,13 +107,19 @@ export default function Header() {
   };
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (_) {
+      // ignore signOut errors — clear local state regardless
+    }
+    resetClient();      // ← reset singleton so next createClient() is fresh
     clear();
     clearCartStore();
     setUserMenuOpen(false);
     setMobileOpen(false);
     toast.success("Signed out");
+    router.refresh();   // ← bust Next.js server component cache
     router.push("/");
   };
 
@@ -122,7 +128,13 @@ export default function Header() {
     user?.email?.split("@")[0] ||
     "Account";
 
-  const isAdmin = mounted && profile?.role === "admin";
+  // Check role from profile (DB) OR from Supabase user_metadata (set at account creation)
+  // Cast via (profile as any) since role may not be in the generated TS type
+  const isAdmin = mounted && (
+    (profile as any)?.role === "admin" ||
+    user?.user_metadata?.role === "admin" ||
+    user?.app_metadata?.role === "admin"
+  );
 
   return (
     <header ref={headerRef} className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
@@ -175,10 +187,9 @@ export default function Header() {
                     </div>
                   )}
                 </div>
-                <button type="button"
-                  onClick={() => { setSearchOpen(false); setSearchQuery(""); setSuggestions([]); }}
-                  className="p-1.5 text-gray-400 hover:text-gray-600">
-                  <X size={15} />
+                <button type="button" onClick={() => { setSearchOpen(false); setSearchQuery(""); setSuggestions([]); }}
+                  className="p-2 text-gray-400 hover:text-gray-600">
+                  <X size={17} />
                 </button>
               </form>
             ) : (
@@ -195,7 +206,11 @@ export default function Header() {
                 <div key={link.label} className="relative">
                   <button
                     onClick={() => setActiveMenu((p) => p === link.label ? null : link.label)}
-                    className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-gray-700 hover:text-pink-600 rounded-lg hover:bg-pink-50 transition-colors whitespace-nowrap"
+                    className={`flex items-center gap-1 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${
+                      activeMenu === link.label
+                        ? "text-pink-600 bg-pink-50"
+                        : "text-gray-700 hover:text-pink-600 hover:bg-pink-50"
+                    }`}
                   >
                     {link.label}
                     <ChevronDown size={13}
@@ -356,7 +371,29 @@ export default function Header() {
               </div>
             ))}
 
-            {!user && (
+            {/* Mobile user section */}
+            {user ? (
+              <div className="border-t border-gray-100 pt-3 mt-2 space-y-1">
+                <Link href="/account" onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-pink-50 rounded-xl">
+                  <User size={15} /> Profile
+                </Link>
+                <Link href="/orders" onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-pink-50 rounded-xl">
+                  <ShoppingBag size={15} /> My Orders
+                </Link>
+                {isAdmin && (
+                  <Link href="/admin" onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 rounded-xl">
+                    <Package size={15} /> Admin Panel
+                  </Link>
+                )}
+                <button onClick={handleSignOut}
+                  className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-xl">
+                  <LogOut size={15} /> Sign out
+                </button>
+              </div>
+            ) : (
               <Link href="/login" onClick={() => setMobileOpen(false)}
                 className="block px-3 py-2.5 text-sm font-bold text-white bg-pink-600 rounded-xl text-center mt-3">
                 Login / Register
