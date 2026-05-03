@@ -371,34 +371,23 @@ export default function Header() {
               </div>
             ))}
 
-            {/* Mobile user section */}
-            {user ? (
-              <div className="border-t border-gray-100 pt-3 mt-2 space-y-1">
-                <Link href="/account" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-pink-50 rounded-xl">
-                  <User size={15} /> Profile
-                </Link>
-                <Link href="/orders" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-pink-50 rounded-xl">
-                  <ShoppingBag size={15} /> My Orders
-                </Link>
-                {isAdmin && (
-                  <Link href="/admin" onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 rounded-xl">
-                    <Package size={15} /> Admin Panel
-                  </Link>
-                )}
-                <button onClick={handleSignOut}
-                  className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-red-500 hover:bg-red-50 rounded-xl">
-                  <LogOut size={15} /> Sign out
-                </button>
-              </div>
-            ) : (
-              <Link href="/login" onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2.5 text-sm font-bold text-white bg-pink-600 rounded-xl text-center mt-3">
-                Login / Register
-              </Link>
-            )}
+            {/* Mobile user section — Profile/Orders/SignOut removed; use avatar dropdown instead */}
+{user ? (
+  isAdmin ? (
+    <div className="border-t border-gray-100 pt-3 mt-2 space-y-1">
+      <Link href="/admin" onClick={() => setMobileOpen(false)}
+        className="flex items-center gap-3 px-3 py-2.5 text-sm text-pink-600 font-semibold hover:bg-pink-50 rounded-xl">
+        <Package size={15} /> Admin Panel
+      </Link>
+    </div>
+  ) : null
+) : (
+  <Link href="/login" onClick={() => setMobileOpen(false)}
+    className="block px-3 py-2.5 text-sm font-bold text-white bg-pink-600 rounded-xl text-center mt-3">
+    Login / Register
+  </Link>
+)}
+            
           </div>
         </div>
       )}
