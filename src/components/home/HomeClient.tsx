@@ -1,8 +1,6 @@
 "use client";
 
-import {
-  useState, useEffect, useCallback, useRef
-} from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -24,41 +22,62 @@ interface Props {
 
 // ─── Hero Carousel ────────────────────────────────────────────────────────────
 function HeroCarousel({ items }: { items: Category[] }) {
-  const [current, setCurrent] = useState(0);
-  const [perPage, setPerPage] = useState(5);
+  const [current,     setCurrent]     = useState(0);
+  const [perPage,     setPerPage]     = useState(5);
+  const [isAnimating, setIsAnimating] = useState(true);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const total = items.length;
-  const maxSlide = Math.max(0, total - perPage);
+
+  const track = useMemo(
+    () => [...items, ...items.slice(0, perPage)],
+    [items, perPage]
+  );
 
   useEffect(() => {
     const update = () => {
-      if (window.innerWidth < 640) setPerPage(3);
-      else if (window.innerWidth < 1024) setPerPage(4);
-      else setPerPage(5);
+      const next =
+        window.innerWidth < 640  ? 3 :
+        window.innerWidth < 1024 ? 4 : 5;
+      setPerPage((prev) => {
+        if (prev !== next) setCurrent(0);
+        return next;
+      });
     };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  const go = useCallback(
-    (idx: number) => setCurrent(Math.max(0, Math.min(idx, maxSlide))),
-    [maxSlide]
-  );
-
-  const resetTimer = useCallback(() => {
-    if (timer.current) clearInterval(timer.current);
-    if (total > perPage) {
-      timer.current = setInterval(() => {
-        setCurrent((c) => (c >= maxSlide ? 0 : c + 1));
-      }, 3000);
-    }
-  }, [total, perPage, maxSlide]);
+  const advance = useCallback(() => {
+    setCurrent((c) => {
+      const next = c + 1;
+      if (next >= total) {
+        setTimeout(() => {
+          setIsAnimating(false);
+          setCurrent(0);
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => setIsAnimating(true))
+          );
+        }, 500);
+      }
+      return next;
+    });
+  }, [total]);
 
   useEffect(() => {
-    resetTimer();
+    if (total <= perPage) return;
+    timer.current = setInterval(advance, 3000);
     return () => { if (timer.current) clearInterval(timer.current); };
-  }, [resetTimer]);
+  }, [advance, total, perPage]);
+
+  const goTo = useCallback(
+    (idx: number) => {
+      const clamped = Math.max(0, Math.min(idx, total - 1));
+      setIsAnimating(true);
+      setCurrent(clamped);
+    },
+    [total]
+  );
 
   if (!items.length) return null;
 
@@ -67,53 +86,49 @@ function HeroCarousel({ items }: { items: Category[] }) {
     kids: "Kids'",
     accessories: "Accessories",
   };
-
   const GAP = 10;
 
   return (
-    <div className="bg-pink-50 border-b border-pink-100 pt-0 pb-1">
+    <div className="bg-pink-50 border-b border-pink-100 pb-1">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
-        {/* Header row with nav arrows */}
-        <div className="flex items-center justify-between mb-3">
-          {total > perPage && (
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => { go(current - 1); resetTimer(); }}
-                disabled={current === 0}
-                className="w-6 h-6 bg-pink-50 hover:bg-pink-600 hover:text-white border border-pink-200 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
-              >
-                <ChevronLeft size={12} />
-              </button>
-              <button
-                onClick={() => { go(current + 1); resetTimer(); }}
-                disabled={current >= maxSlide}
-                className="w-6 h-6 bg-pink-50 hover:bg-pink-600 hover:text-white border border-pink-200 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
-              >
-                <ChevronRight size={12} />
-              </button>
-            </div>
-          )}
-        </div>
+        {total > perPage && (
+          <div className="flex items-center gap-1.5 mb-3 justify-end">
+            <button
+              onClick={() => goTo(current - 1)}
+              disabled={current === 0}
+              className="w-6 h-6 bg-pink-50 hover:bg-pink-600 hover:text-white border border-pink-200 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
+            >
+              <ChevronLeft size={12} />
+            </button>
+            <button
+              onClick={() => goTo(current + 1)}
+              className="w-6 h-6 bg-pink-50 hover:bg-pink-600 hover:text-white border border-pink-200 rounded-full flex items-center justify-center transition-all"
+            >
+              <ChevronRight size={12} />
+            </button>
+          </div>
+        )}
 
-        {/* Sliding track */}
         <div className="overflow-hidden">
           <div
-            className="flex transition-transform duration-500 ease-in-out"
+            className="flex"
             style={{
               gap: `${GAP}px`,
+              transition: isAnimating ? "transform 500ms ease-in-out" : "none",
               transform: `translateX(calc(-${current} * (${100 / perPage}% + ${GAP / perPage}px)))`,
             }}
           >
-            {items.map((cat) => (
+            {track.map((cat, idx) => (
               <Link
-                key={cat.id}
+                key={`${cat.id}-${idx}`}
                 href={`/${cat.gender}/${cat.slug}`}
                 className="group flex-shrink-0"
-                style={{ width: `calc(${100 / perPage}% - ${(GAP * (perPage - 1)) / perPage}px)` }}
+                style={{
+                  width: `calc(${100 / perPage}% - ${(GAP * (perPage - 1)) / perPage}px)`,
+                }}
               >
                 <div className="rounded-xl overflow-hidden border border-gray-100 group-hover:border-pink-300 group-hover:shadow-md transition-all duration-300 bg-white">
-                  {/* Image — 3:4 portrait, object-contain so nothing gets cut */}
                   <div className="relative w-full bg-gray-50" style={{ aspectRatio: "3 / 5" }}>
                     <Image
                       src={cat.image_url!}
@@ -122,14 +137,12 @@ function HeroCarousel({ items }: { items: Category[] }) {
                       className="object-contain group-hover:scale-105 transition-transform duration-500"
                       sizes="(max-width: 640px) 50vw, 20vw"
                     />
-                    {/* Gender badge */}
                     {cat.gender && LABELS[cat.gender] && (
                       <div className="absolute top-2 left-2 bg-pink-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10">
                         {LABELS[cat.gender]}
                       </div>
                     )}
                   </div>
-                  {/* Name strip */}
                   <div className="bg-white border-t border-gray-100 px-2.5 py-2">
                     <p className="text-gray-900 font-bold text-xs leading-tight truncate">
                       {cat.name}
@@ -144,15 +157,14 @@ function HeroCarousel({ items }: { items: Category[] }) {
           </div>
         </div>
 
-        {/* Dots */}
         {total > perPage && (
           <div className="flex justify-center gap-1.5 mt-3">
-            {Array.from({ length: maxSlide + 1 }).map((_, i) => (
+            {items.map((_, i) => (
               <button
                 key={i}
-                onClick={() => { go(i); resetTimer(); }}
+                onClick={() => goTo(i)}
                 className={`transition-all rounded-full ${
-                  i === current
+                  i === current % total
                     ? "w-4 h-1.5 bg-pink-600"
                     : "w-1.5 h-1.5 bg-gray-300 hover:bg-pink-300"
                 }`}
@@ -164,7 +176,6 @@ function HeroCarousel({ items }: { items: Category[] }) {
     </div>
   );
 }
-
 
 // ─── Home Product Card ────────────────────────────────────────────────────────
 function HomeProductCard({ product }: { product: Product }) {
