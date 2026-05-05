@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     url:         "https://skmwardrobe.in",
     title:       "SKM Wardrobe — Ethnic Wear for Women & Kids",
     description: "Quality sarees, kurtis and ethnic wear. Free shipping above ₹599.",
-    images: [{ url: "/og-image.jpg", width: 1200, height: 630 }],
+    images: [{ url: "/og-image.jpg", width: 1730, height: 909 }],
   },
   twitter: {
     card:  "summary_large_image",
