@@ -3,7 +3,7 @@ import { Geist } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { headers } from "next/headers";
 import AuthProvider from "@/components/providers/AuthProvider";
-import Header from "@/components/layout/Header";
+import HeaderServer from "@/components/layout/HeaderServer";
 import Footer from "@/components/layout/Footer";
 import CartDrawer from "@/components/cart/CartDrawer";
 import "@/app/globals.css";
@@ -57,7 +57,7 @@ export default async function RootLayout({
       <body className="min-h-screen bg-pink-50 text-gray-900 antialiased flex flex-col">
         <AuthProvider>
           {/* Store chrome — hidden on all /admin/* pages */}
-          {!isAdmin && <Header />}
+          {!isAdmin && <HeaderServer />}
           {!isAdmin && <CartDrawer />}
 
           <main className="flex-1">{children}</main>
