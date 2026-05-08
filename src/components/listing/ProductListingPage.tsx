@@ -52,12 +52,12 @@ function ProductListingContent({
   const fabricFilter = sp.get("fabric") ?? "";  // now comma-separated e.g. "id1,id2"
 
   const updateParam = (key: string, value: string | null) => {
-    const params = new URLSearchParams(sp.toString());
-    if (value) params.set(key, value);
-    else params.delete(key);
-    params.delete("page");
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  };
+  const params = new URLSearchParams(sp.toString());
+  if (value) params.set(key, value);
+  else params.delete(key);
+  if (key !== "page") params.delete("page");
+  router.push(`${pathname}?${params.toString()}`, { scroll: false });
+};
 
   // Multi‑select toggle for color / fabric
   const toggleParam = (key: string, value: string) => {
