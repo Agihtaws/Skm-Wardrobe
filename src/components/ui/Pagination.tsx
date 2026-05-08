@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,8 @@ interface Props {
 }
 
 export default function Pagination({ page, totalPages, onPageChange }: Props) {
+  if (totalPages <= 1) return null;
+
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1).filter(
     (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1
   );
@@ -27,12 +30,12 @@ export default function Pagination({ page, totalPages, onPageChange }: Props) {
       {pages.map((p, i) => {
         const prev = pages[i - 1];
         return (
-          <>
+          // key must be on Fragment, not on children inside it
+          <Fragment key={p}>
             {prev && p - prev > 1 && (
-              <span key={`ellipsis-${p}`} className="px-2 text-gray-400 text-sm">…</span>
+              <span className="px-2 text-gray-400 text-sm">…</span>
             )}
             <button
-              key={p}
               onClick={() => onPageChange(p)}
               className={cn(
                 "w-9 h-9 rounded-lg text-sm font-medium transition-colors",
@@ -43,7 +46,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Props) {
             >
               {p}
             </button>
-          </>
+          </Fragment>
         );
       })}
 
