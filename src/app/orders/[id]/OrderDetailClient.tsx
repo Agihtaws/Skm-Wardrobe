@@ -48,10 +48,10 @@ export default function OrderDetailClient({
   const [payingNow, setPayingNow]     = useState(false);
 
   // Return state
-  const [showReturn, setShowReturn]           = useState(false);
-  const [returnReason, setReturnReason]       = useState("");
+  const [showReturn, setShowReturn]             = useState(false);
+  const [returnReason, setReturnReason]         = useState("");
   const [submittingReturn, setSubmittingReturn] = useState(false);
-  const [returnDone, setReturnDone]           = useState(
+  const [returnDone, setReturnDone]             = useState(
     initial.return_requested ?? false
   );
 
@@ -299,6 +299,14 @@ export default function OrderDetailClient({
                 >
                   {item.product_name}
                 </Link>
+
+                {/* ✅ Size badge */}
+                {item.size && (
+                  <span className="inline-block mt-0.5 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                    Size: {item.size}
+                  </span>
+                )}
+
                 <p className="text-xs text-gray-500 mt-1">Qty: {item.quantity}</p>
                 <p className="text-sm font-bold text-gray-900 mt-1">
                   ₹{Number(item.price_at_time).toLocaleString("en-IN")}

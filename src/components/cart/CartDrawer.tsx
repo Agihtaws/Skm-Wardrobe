@@ -144,9 +144,16 @@ export default function CartDrawer() {
                           {product?.name ?? item.product_name}
                         </Link>
 
+                        {/* 👇 Add here */}
+                        {item.size && (
+                          <span className="inline-block mt-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                            Size: {item.size}
+                          </span>
+                        )}
+
                         {oos ? (
                           <span className="inline-flex items-center gap-1 text-xs text-red-500 font-medium mt-1">
-                            <AlertTriangle size={11} /> Out of stock
+                             <AlertTriangle size={11} /> Out of stock
                           </span>
                         ) : (
                           <p className="text-sm font-bold text-gray-900 mt-1">

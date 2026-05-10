@@ -115,11 +115,20 @@ export default function CartPageClient({ initialCart }: { initialCart: any[] }) 
                     >
                       {product?.name}
                     </Link>
+
+                    {/* 👇 Add here */}
+                    {item.size && (
+                      <span className="inline-block mt-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                        Size: {item.size}
+                      </span>
+                    )}
+
                     {oos && (
                       <span className="inline-flex items-center gap-1 text-xs text-red-500 font-medium mt-1">
                         <AlertTriangle size={11} /> Out of stock
                       </span>
                     )}
+            
                   </div>
 
                   <div className="flex items-center justify-between mt-3">

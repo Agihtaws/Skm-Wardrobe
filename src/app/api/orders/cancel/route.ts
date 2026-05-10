@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     const { data: order } = await admin
       .from("orders")
-      .select("*, items:order_items(product_id, quantity)")
+      .select("*, items:order_items(product_id, variant_id, quantity)")  // ✅ added variant_id
       .eq("id", order_id)
       .eq("user_id", user.id)
       .single();
@@ -23,19 +23,32 @@ export async function POST(request: Request) {
     if (!order)                                      return err("Order not found", 404);
     if (!["pending", "paid"].includes(order.status)) return err("This order cannot be cancelled");
 
-    // Restore stock
+    // ✅ Updated: restore variant stock if applicable
     for (const item of order.items ?? []) {
-      const { data: product } = await admin
-        .from("products")
-        .select("stock")
-        .eq("id", item.product_id)
-        .single();
-
-      if (product) {
-        await admin
+      if (item.variant_id) {
+        const { data: variant } = await admin
+          .from("product_variants")
+          .select("stock")
+          .eq("id", item.variant_id)
+          .single();
+        if (variant) {
+          await admin
+            .from("product_variants")
+            .update({ stock: variant.stock + item.quantity })
+            .eq("id", item.variant_id);
+        }
+      } else {
+        const { data: product } = await admin
           .from("products")
-          .update({ stock: product.stock + item.quantity })
-          .eq("id", item.product_id);
+          .select("stock")
+          .eq("id", item.product_id)
+          .single();
+        if (product) {
+          await admin
+            .from("products")
+            .update({ stock: product.stock + item.quantity })
+            .eq("id", item.product_id);
+        }
       }
     }
 

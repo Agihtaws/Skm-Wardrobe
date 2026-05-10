@@ -35,13 +35,12 @@ export async function POST(request: Request) {
       (sum, item) => sum + (item.product.sell_price ?? item.product.price) * item.quantity, 0
     );
     const gst      = Math.round(subtotal * GST_RATE);
-    const shipping = cartItems.length * SHIPPING_PER_ITEM; // ← per item
+    const shipping = cartItems.length * SHIPPING_PER_ITEM;
     const total    = subtotal + gst + shipping;
 
     const admin = createAdminClient();
 
     if (payment_method === "cod") {
-      // Create order directly
       const { data: order, error: orderErr } = await admin
         .from("orders")
         .insert({
@@ -59,24 +58,40 @@ export async function POST(request: Request) {
 
       if (orderErr) return err(orderErr.message);
 
-      // Insert order items & decrement stock
+      // ✅ Updated: includes variant_id and size
       const orderItems = cartItems.map((item) => ({
-        order_id:       order.id,
-        product_id:     item.product_id,
-        product_name:   item.product.name,
-        product_image:  item.product.images?.[0] ?? null,
-        price_at_time:  item.product.sell_price ?? item.product.price,
-        quantity:       item.quantity,
+        order_id:      order.id,
+        product_id:    item.product_id,
+        variant_id:    item.variant_id ?? null,
+        size:          item.size ?? null,
+        product_name:  item.product.name,
+        product_image: item.product.images?.[0] ?? null,
+        price_at_time: item.product.sell_price ?? item.product.price,
+        quantity:      item.quantity,
       }));
 
       await admin.from("order_items").insert(orderItems);
 
-      // Decrement stock
+      // ✅ Updated: decrement variant stock if applicable
       for (const item of cartItems) {
-        await admin
-          .from("products")
-          .update({ stock: item.product.stock - item.quantity })
-          .eq("id", item.product_id);
+        if (item.variant_id) {
+          const { data: variant } = await admin
+            .from("product_variants")
+            .select("stock")
+            .eq("id", item.variant_id)
+            .single();
+          if (variant) {
+            await admin
+              .from("product_variants")
+              .update({ stock: Math.max(0, variant.stock - item.quantity) })
+              .eq("id", item.variant_id);
+          }
+        } else {
+          await admin
+            .from("products")
+            .update({ stock: Math.max(0, item.product.stock - item.quantity) })
+            .eq("id", item.product_id);
+        }
       }
 
       // Clear cart
@@ -92,12 +107,11 @@ export async function POST(request: Request) {
     });
 
     const rzpOrder = await razorpay.orders.create({
-      amount:   total * 100, // paise
+      amount:   total * 100,
       currency: "INR",
       notes:    { user_id: user.id, address_id },
     });
 
-    // Create pending order
     const { data: order, error: orderErr } = await admin
       .from("orders")
       .insert({
@@ -116,9 +130,12 @@ export async function POST(request: Request) {
 
     if (orderErr) return err(orderErr.message);
 
+    // ✅ Updated: includes variant_id and size
     const orderItems = cartItems.map((item) => ({
       order_id:      order.id,
       product_id:    item.product_id,
+      variant_id:    item.variant_id ?? null,
+      size:          item.size ?? null,
       product_name:  item.product.name,
       product_image: item.product.images?.[0] ?? null,
       price_at_time: item.product.sell_price ?? item.product.price,

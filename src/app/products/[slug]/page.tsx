@@ -33,21 +33,20 @@ export default async function ProductPage({ params }: Props) {
   const supabase = await createClient();
 
   const { data: product } = await supabase
-    .from("products")
-    .select(`
-      *,
-      category:categories(id, name, slug, gender, parent_id),
-      product_attributes(
-        id,
-        attribute_id,
-        attribute_value_id,
-        attribute:attributes(id, name),
-        attribute_value:attribute_values(id, value)
-      )
-    `)
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .single();
+  .from("products")
+  .select(`
+    *,
+    category:categories(id, name, slug, gender, parent_id),
+    product_attributes(
+      id, attribute_id, attribute_value_id,
+      attribute:attributes(id, name),
+      attribute_value:attribute_values(id, value)
+    ),
+    variants:product_variants(*)
+  `)
+  .eq("slug", slug)
+  .eq("is_active", true)
+  .single();
 
   if (!product) notFound();
 

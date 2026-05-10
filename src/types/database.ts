@@ -9,6 +9,16 @@ export type OrderStatus =
   | "refunded";
 export type UserRole = "customer" | "admin";
 
+export interface ProductVariant {
+  id:         string;
+  product_id: string;
+  size:       string;
+  stock:      number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -27,6 +37,7 @@ export interface Product {
   updated_at: string;
   category?: Category;
   product_attributes?: ProductAttribute[];
+  variants?: ProductVariant[];
 }
 
 export interface Profile {
@@ -70,24 +81,29 @@ export interface Order {
 }
 
 export interface OrderItem {
-  id: string;
-  order_id: string;
-  product_id: string | null;
-  product_name: string;
+  id:            string;
+  order_id:      string;
+  product_id:    string | null;
+  variant_id:    string | null;
+  size:          string | null;
+  product_name:  string;
   product_image: string | null;
   price_at_time: number;
-  quantity: number;
+  quantity:      number;
 }
 
 export interface CartItem {
-  id: string;
-  user_id: string;
-  product_id: string;
-  quantity: number;
-  product_name?: string;   // ← add this
-  created_at: string;
-  updated_at: string;
-  product?: Product;
+  id:           string;
+  user_id:      string;
+  product_id:   string;
+  variant_id:   string | null;
+  size:         string | null;
+  quantity:     number;
+  product_name?: string;
+  created_at:   string;
+  updated_at:   string;
+  product?:     Product;
+  variant?:     ProductVariant;
 }
 
 export interface Attribute {
@@ -122,7 +138,7 @@ export interface Category {
   parent_id: string | null;
   sort_order: number;
   is_active: boolean;
-  image_url: string | null;  // ← add this
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 }
