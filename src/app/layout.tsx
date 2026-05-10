@@ -26,6 +26,11 @@ export const metadata: Metadata = {
     "silk sarees", "kids ethnic wear", "women clothing india",
     "SKM Wardrobe", "Thanjavur sarees",
   ],
+  icons: {
+    icon:     "/logo.png",
+    shortcut: "/logo.png",
+    apple:    "/logo.png",
+  },
   openGraph: {
     siteName:    "SKM Wardrobe",
     type:        "website",
@@ -33,7 +38,7 @@ export const metadata: Metadata = {
     url:         "https://skmwardrobe.in",
     title:       "SKM Wardrobe — Ethnic Wear for Women & Kids",
     description: "Quality sarees, kurtis and ethnic wear. Free shipping above ₹599.",
-    images: [{ url: "/og-image.jpg", width: 1200, height: 630 }],
+    images: [{ url: "/logo.png", width: 512, height: 512 }],
   },
   twitter: {
     card:  "summary_large_image",
@@ -54,6 +59,9 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={geist.variable}>
+      <head>
+        <link rel="icon" href="/logo.png" type="image/png" />
+      </head>
       <body className="min-h-screen bg-pink-50 text-gray-900 antialiased flex flex-col">
         <AuthProvider>
           {/* Store chrome — hidden on all /admin/* pages */}
