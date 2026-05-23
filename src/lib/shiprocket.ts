@@ -73,7 +73,7 @@ export async function createShiprocketOrder(params: {
       billing_last_name:      "",
       billing_address:        params.address,
       billing_city:           params.city,
-      billing_pincode:        parseInt(params.pincode, 10),   // ✅ integer
+      billing_pincode:        params.pincode,        // ✅ string as per Shiprocket docs
       billing_state:          params.state,
       billing_country:        "India",
       billing_email:          "customer@skmwardrobe.in",
@@ -178,7 +178,7 @@ export async function createReturn(params: {
       pickup_city:            params.city,
       pickup_state:           params.state,
       pickup_country:         STORE_COUNTRY,
-      pickup_pincode:         parseInt(params.pincode, 10),   // ✅ integer
+      pickup_pincode:         params.pincode,
 
       // Return to your store
       shipping_customer_name: STORE_NAME,
@@ -187,7 +187,7 @@ export async function createReturn(params: {
       shipping_city:          STORE_CITY,
       shipping_state:         STORE_STATE,
       shipping_country:       STORE_COUNTRY,
-      shipping_pincode:       parseInt(STORE_PINCODE, 10),    // ✅ integer
+      shipping_pincode:       STORE_PINCODE,
 
       payment_method: "Prepaid",
       sub_total:      params.items.reduce((s, i) => s + i.price * i.qty, 0),

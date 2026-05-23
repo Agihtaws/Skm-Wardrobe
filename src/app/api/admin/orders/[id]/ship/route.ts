@@ -14,7 +14,7 @@ export async function POST(
     const { id } = await params;
     const admin  = createAdminClient();
 
-    // Step 1 — fetch order + items only (no join)
+    // Step 1 — fetch order + items
     const { data: order, error: orderErr } = await admin
       .from("orders")
       .select(`*, items:order_items(*)`)
@@ -24,19 +24,18 @@ export async function POST(
     if (orderErr) return serverError(orderErr);
     if (!order)   return notFound("Order");
 
-    // Step 2 — fetch address separately (reliable, no FK needed)
+    // Step 2 — fetch address separately by address_id
     const { data: address } = order.address_id
       ? await admin.from("addresses").select("*").eq("id", order.address_id).single()
       : { data: null };
 
-    // Step 3 — log to debug
     console.log("[Ship] address_id:", order.address_id);
     console.log("[Ship] address:", JSON.stringify(address));
 
     if (!address?.pincode)
       return err("Order has no delivery address");
 
-    // Allow: paid, processing, AND pending COD orders
+    // Step 3 — check if order can be shipped
     const canShip =
       ["paid", "processing"].includes(order.status) ||
       (order.status === "pending" && order.payment_method === "cod");
@@ -46,15 +45,33 @@ export async function POST(
         `Cannot ship order with status "${order.status}". Must be paid, processing, or pending COD.`
       );
 
-    const srRes = await createShiprocketOrder({
-      order_id:       order.id.slice(0, 8).toUpperCase(),
-      order_date:     new Date(order.created_at).toISOString().split("T")[0],
-      customer_name:  address.full_name ?? "Customer",
-      customer_phone: address.phone     ?? "",
+    // Step 4 — build unique order_id to avoid Shiprocket conflicts on retry
+    const srOrderId = `${order.id.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+
+    // Step 5 — log exact payload before sending
+    const payload = {
+      order_id:       srOrderId,
+      customer_name:  address.full_name  ?? "Customer",
+      customer_phone: address.phone      ?? "",
       address:        `${address.line1}${address.line2 ? ", " + address.line2 : ""}`,
-      city:           address.city      ?? "",
-      state:          address.state     ?? "",
-      pincode:        address.pincode   ?? "",
+      city:           address.city       ?? "",
+      state:          address.state      ?? "",
+      pincode:        address.pincode    ?? "",
+      total:          Number(order.total),
+      payment_method: order.payment_method === "cod" ? "cod" : "prepaid",
+      items_count:    (order.items ?? []).length,
+    };
+    console.log("[Ship] Sending to Shiprocket:", JSON.stringify(payload));
+
+    const srRes = await createShiprocketOrder({
+      order_id:       srOrderId,
+      order_date:     new Date(order.created_at).toISOString().split("T")[0],
+      customer_name:  address.full_name  ?? "Customer",
+      customer_phone: address.phone      ?? "",
+      address:        `${address.line1}${address.line2 ? ", " + address.line2 : ""}`,
+      city:           address.city       ?? "",
+      state:          address.state      ?? "",
+      pincode:        address.pincode    ?? "",
       total:          Number(order.total),
       payment_method: order.payment_method === "cod" ? "cod" : "prepaid",
       items:          (order.items ?? []).map((item: any) => ({
@@ -65,14 +82,14 @@ export async function POST(
       })),
     });
 
-    console.log("[Shiprocket] Create order response:", JSON.stringify(srRes));
+    console.log("[Shiprocket] Response:", JSON.stringify(srRes));
 
     // Shiprocket returns status 1 for success
     if (srRes.status_code && srRes.status_code !== 1) {
       return err(`Shiprocket error: ${srRes.message ?? JSON.stringify(srRes)}`);
     }
 
-    // Update order with Shiprocket details
+    // Step 6 — update order with Shiprocket IDs only (no tracking/AWB needed)
     await admin
       .from("orders")
       .update({

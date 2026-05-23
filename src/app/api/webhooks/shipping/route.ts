@@ -27,91 +27,86 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    // Log everything Shiprocket sends — check in Vercel logs
-    console.log("[Shipping Webhook]", JSON.stringify({
+    console.log("[Shipping Webhook] Raw body:", JSON.stringify({
       awb:            body.awb ?? body.AWB,
       current_status: body.current_status ?? body.status,
       courier:        body.courier_name,
-      order_id:       body.order_id,
+      order_id:       body.order_id,        // our custom ID e.g. "D3A44367-ABC123"
+      sr_order_id:    body.sr_order_id,     // Shiprocket's internal numeric ID
       shipment_id:    body.shipment_id,
       timestamp:      new Date().toISOString(),
     }));
 
-    const awb          = body.awb ?? body.AWB;
     const srStatus     = (body.current_status ?? body.status ?? "").toUpperCase().trim();
-    const courierName  = body.courier_name ?? body.CourierName ?? "";
-    const srOrderId    = body.order_id ?? body.SR_Order_Id;
     const mappedStatus = STATUS_MAP[srStatus];
 
     if (!mappedStatus) {
-      return NextResponse.json({
-        received: true,
-        skipped:  `unmapped status: ${srStatus}`,
-      });
+      return NextResponse.json({ received: true, skipped: `unmapped status: ${srStatus}` });
     }
 
     const admin = createAdminClient();
 
-    // Try finding order by AWB first
-    if (awb) {
-      const { data: orderByAWB } = await admin
+    // ✅ Use Shiprocket's internal numeric ID — matches what we store in shiprocket_order_id
+    const srInternalId = body.sr_order_id ?? body.SR_Order_Id;
+
+    if (srInternalId) {
+      const { data: order } = await admin
         .from("orders")
-        .select("id, status, payment_method")
-        .or(`shiprocket_awb.eq.${awb},delhivery_awb.eq.${awb}`)
+        .select("id, status")
+        .eq("shiprocket_order_id", String(srInternalId))
         .single();
 
-      if (orderByAWB) {
-        if (mappedStatus !== orderByAWB.status) {
-          await admin.from("orders").update({
-            status:         mappedStatus,
-            shiprocket_awb: awb,
-            delhivery_awb:  awb,
-            courier_name:   courierName,
-          }).eq("id", orderByAWB.id);
+      if (order) {
+        if (mappedStatus !== order.status) {
+          await admin
+            .from("orders")
+            .update({ status: mappedStatus })   // ✅ only update status, no tracking fields
+            .eq("id", order.id);
 
-          // If RTO (return to origin) — restore stock
-          if (["cancelled"].includes(mappedStatus) && srStatus.includes("RTO")) {
-            await restoreStock(admin, orderByAWB.id);
+          // Restore stock on RTO
+          if (mappedStatus === "cancelled" && srStatus.includes("RTO")) {
+            await restoreStock(admin, order.id);
           }
 
-          console.log(`[Webhook] Updated order ${orderByAWB.id}: ${orderByAWB.status} → ${mappedStatus}`);
+          console.log(`[Webhook] Order ${order.id}: ${order.status} → ${mappedStatus}`);
         }
         return NextResponse.json({ received: true, updated: mappedStatus });
       }
     }
 
-    // Try finding by Shiprocket order ID
-    if (srOrderId) {
-      const { data: orderBySR } = await admin
+    // Fallback — try by shipment_id
+    const shipmentId = body.shipment_id;
+    if (shipmentId) {
+      const { data: order } = await admin
         .from("orders")
         .select("id, status")
-        .eq("shiprocket_order_id", String(srOrderId))
+        .eq("shiprocket_shipment_id", String(shipmentId))
         .single();
 
-      if (orderBySR && mappedStatus !== orderBySR.status) {
-        await admin.from("orders").update({
-          status:         mappedStatus,
-          shiprocket_awb: awb ?? null,
-          delhivery_awb:  awb ?? null,
-          courier_name:   courierName,
-        }).eq("id", orderBySR.id);
+      if (order && mappedStatus !== order.status) {
+        await admin
+          .from("orders")
+          .update({ status: mappedStatus })
+          .eq("id", order.id);
 
-        if (["cancelled"].includes(mappedStatus) && srStatus.includes("RTO")) {
-          await restoreStock(admin, orderBySR.id);
+        if (mappedStatus === "cancelled" && srStatus.includes("RTO")) {
+          await restoreStock(admin, order.id);
         }
 
-        console.log(`[Webhook] Updated by SR ID ${srOrderId}: → ${mappedStatus}`);
+        console.log(`[Webhook] Order by shipment ${shipmentId}: → ${mappedStatus}`);
+        return NextResponse.json({ received: true, updated: mappedStatus });
       }
     }
 
-    return NextResponse.json({ received: true, updated: mappedStatus });
+    console.log("[Webhook] No matching order found");
+    return NextResponse.json({ received: true, skipped: "no matching order" });
+
   } catch (e) {
     console.error("[Webhook Error]", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
 
-// Restore stock when order is RTO'd or cancelled via webhook
 async function restoreStock(admin: any, orderId: string) {
   try {
     const { data: items } = await admin
