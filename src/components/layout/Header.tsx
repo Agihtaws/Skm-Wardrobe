@@ -73,12 +73,23 @@ export default function Header({ navSections }: HeaderProps) {
   };
 
   const fetchSuggestions = async (q: string) => {
-    if (!q.trim() || q.length < 2) { setSuggestions([]); return; }
-    const res  = await fetch(`/api/products?search=${encodeURIComponent(q)}&limit=6`);
-    const json = await res.json();
-    if (json.success) setSuggestions(json.data.products.map((p: any) => ({ name: p.name, slug: p.slug })));
-  };
-
+  if (!q.trim() || q.length < 2) { setSuggestions([]); return; }
+  const res  = await fetch(`/api/products?search=${encodeURIComponent(q)}&limit=50`);
+  const json = await res.json();
+  if (json.success) {
+    const seen   = new Set<string>();
+    const unique: { name: string; slug: string }[] = [];
+    for (const p of json.data.products) {
+      const key = p.name.trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push({ name: p.name, slug: p.slug });
+      }
+      if (unique.length >= 6) break;  // max 6 unique suggestions
+    }
+    setSuggestions(unique);
+  }
+};
   const handleSignOut = async () => {
     try { await createClient().auth.signOut(); } catch (_) {}
     resetClient(); clear(); clearCartStore();
@@ -122,7 +133,12 @@ export default function Header({ navSections }: HeaderProps) {
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-[200] overflow-hidden">
                       {suggestions.map((s, i) => (
                         <button key={i} type="button"
-                          onMouseDown={() => { router.push(`/products/${s.slug}`); setSearchOpen(false); setSearchQuery(""); setSuggestions([]); }}
+                          onMouseDown={() => {
+  router.push(`/search?q=${encodeURIComponent(s.name)}`);
+  setSearchOpen(false);
+  setSearchQuery("");
+  setSuggestions([]);
+}}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 flex items-center gap-2 transition-colors">
                           <Search size={11} className="text-gray-400 flex-shrink-0" /> {s.name}
                         </button>
