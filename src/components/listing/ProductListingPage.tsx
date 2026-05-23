@@ -124,17 +124,19 @@ function ProductListingContent({
   useEffect(() => {
     // If we have initial data and params are at default, skip first fetch
     if (
-      initialProducts &&
-      page === 1 &&
-      sort === "created_at" &&
-      dir === "desc" &&
-      !colorFilter &&
-      !fabricFilter &&
-      (catFilter === serverCategoryId || (!catFilter && !serverCategoryId))
-    ) {
-      setLoading(false);
-      return;
-    }
+  initialProducts &&
+  page === 1 &&
+  sort === "created_at" &&
+  dir === "desc" &&
+  !colorFilter &&
+  !fabricFilter &&
+  (catFilter === serverCategoryId || (!catFilter && !serverCategoryId))
+) {
+  setProducts(initialProducts);        // ✅ reset to server data
+  setTotal(initialTotal ?? 0);         // ✅ reset total too
+  setLoading(false);
+  return;
+}
     fetchProducts();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spString]);
