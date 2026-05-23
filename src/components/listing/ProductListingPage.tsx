@@ -17,27 +17,30 @@ interface FilterData {
 }
 
 interface Props {
-  gender:       Gender;
-  categoryId?:  string;
-  title:        string;
-  searchParams: { [key: string]: string | undefined };
+  gender:           Gender;
+  categoryId?:      string;
+  title:            string;
+  searchParams:     { [key: string]: string | undefined };
+  initialProducts?: Product[];
+  initialTotal?:    number;
 }
 
 const LIMIT = 20;
 
-// ─── Inner component that uses useSearchParams ──────────────────────────────
 function ProductListingContent({
   gender,
   categoryId: serverCategoryId,
   title,
+  initialProducts,
+  initialTotal,
 }: Omit<Props, "searchParams">) {
   const router   = useRouter();
   const pathname = usePathname();
   const sp       = useSearchParams();
 
-  const [products,   setProducts]   = useState<Product[]>([]);
-  const [total,      setTotal]      = useState(0);
-  const [loading,    setLoading]    = useState(true);
+  const [products,   setProducts]   = useState<Product[]>(initialProducts ?? []);
+  const [total,      setTotal]      = useState(initialTotal ?? 0);
+  const [loading,    setLoading]    = useState(!initialProducts);
   const [filterData, setFilterData] = useState<FilterData>({ colors: [], fabrics: [], categories: [] });
   const [filterOpen, setFilterOpen] = useState(false);
   const [expandedFilters, setExpandedFilters] = useState<Set<string>>(
@@ -46,27 +49,24 @@ function ProductListingContent({
 
   const page         = parseInt(sp.get("page") ?? "1");
   const sort         = sp.get("sort") ?? "created_at";
-  const dir          = sp.get("dir") ?? "desc";
+  const dir          = sp.get("dir")  ?? "desc";
   const catFilter    = sp.get("category") ?? serverCategoryId ?? "";
-  const colorFilter  = sp.get("color") ?? "";   // now comma-separated e.g. "id1,id2"
-  const fabricFilter = sp.get("fabric") ?? "";  // now comma-separated e.g. "id1,id2"
+  const colorFilter  = sp.get("color")  ?? "";
+  const fabricFilter = sp.get("fabric") ?? "";
 
   const updateParam = (key: string, value: string | null) => {
-  const params = new URLSearchParams(sp.toString());
-  if (value) params.set(key, value);
-  else params.delete(key);
-  if (key !== "page") params.delete("page");
-  router.push(`${pathname}?${params.toString()}`, { scroll: false });
-};
+    const params = new URLSearchParams(sp.toString());
+    if (value) params.set(key, value);
+    else       params.delete(key);
+    if (key !== "page") params.delete("page");
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
-  // Multi‑select toggle for color / fabric
   const toggleParam = (key: string, value: string) => {
     const current = sp.get(key) ?? "";
     const values  = current ? current.split(",") : [];
     const exists  = values.includes(value);
-    const updated = exists
-      ? values.filter((v) => v !== value)
-      : [...values, value];
+    const updated = exists ? values.filter((v) => v !== value) : [...values, value];
     updateParam(key, updated.length ? updated.join(",") : null);
   };
 
@@ -96,6 +96,8 @@ function ProductListingContent({
   }, [gender, catFilter]);
 
   const fetchProducts = useCallback(async () => {
+    // Skip first fetch if we already have server-provided initial data
+    // (only skip when on page 1, no filters, default sort)
     setLoading(true);
     const params = new URLSearchParams({
       gender,
@@ -105,8 +107,8 @@ function ProductListingContent({
       dir,
     });
     if (catFilter)    params.set("category", catFilter);
-    if (colorFilter)  params.set("color", colorFilter);
-    if (fabricFilter) params.set("fabric", fabricFilter);
+    if (colorFilter)  params.set("color",    colorFilter);
+    if (fabricFilter) params.set("fabric",   fabricFilter);
 
     const res  = await fetch(`/api/products?${params}`);
     const json = await res.json();
@@ -117,25 +119,41 @@ function ProductListingContent({
     setLoading(false);
   }, [page, sort, dir, catFilter, colorFilter, fabricFilter, gender]);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  // Only fetch client-side when search params actually change
+  const spString = sp.toString();
+  useEffect(() => {
+    // If we have initial data and params are at default, skip first fetch
+    if (
+      initialProducts &&
+      page === 1 &&
+      sort === "created_at" &&
+      dir === "desc" &&
+      !colorFilter &&
+      !fabricFilter &&
+      (catFilter === serverCategoryId || (!catFilter && !serverCategoryId))
+    ) {
+      setLoading(false);
+      return;
+    }
+    fetchProducts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spString]);
 
-  const rootCats  = filterData.categories.filter((c) => c.gender === gender && !c.parent_id);
+  const rootCats   = filterData.categories.filter((c) => c.gender === gender && !c.parent_id);
   const getSubCats = (parentId: string) =>
     filterData.categories.filter((c) => c.parent_id === parentId);
 
   const totalPages = Math.ceil(total / LIMIT);
 
-  // Helper to get selected color names
   const selectedColorNames = colorFilter
-    ? colorFilter.split(",").map(id => filterData.colors.find(c => c.id === id)?.value).filter(Boolean)
+    ? colorFilter.split(",").map((id) => filterData.colors.find((c) => c.id === id)?.value).filter(Boolean)
     : [];
   const selectedFabricNames = fabricFilter
-    ? fabricFilter.split(",").map(id => filterData.fabrics.find(f => f.id === id)?.value).filter(Boolean)
+    ? fabricFilter.split(",").map((id) => filterData.fabrics.find((f) => f.id === id)?.value).filter(Boolean)
     : [];
 
   const filterPanel = (
     <div className="space-y-5">
-      {/* Title */}
       <div className="pb-3 mb-4 border-b border-gray-100">
         <p className="font-bold text-pink-600 text-sm uppercase tracking-wider flex items-center gap-2">
           <SlidersHorizontal size={14} />
@@ -143,17 +161,11 @@ function ProductListingContent({
         </p>
       </div>
 
-      {/* Active filters */}
       {hasFilters && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Active Filters
-            </p>
-            <button
-              onClick={clearAll}
-              className="text-xs text-pink-600 hover:underline font-medium"
-            >
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Filters</p>
+            <button onClick={clearAll} className="text-xs text-pink-600 hover:underline font-medium">
               Clear all
             </button>
           </div>
@@ -161,32 +173,24 @@ function ProductListingContent({
             {catFilter && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">
                 {filterData.categories.find((c) => c.id === catFilter)?.name ?? "Category"}
-                <button onClick={() => updateParam("category", null)}>
-                  <X size={11} />
-                </button>
+                <button onClick={() => updateParam("category", null)}><X size={11} /></button>
               </span>
             )}
-            {/* Multiple color chips */}
             {colorFilter && selectedColorNames.map((name, idx) => {
               const colorId = colorFilter.split(",")[idx];
               return (
                 <span key={colorId} className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">
                   {name}
-                  <button onClick={() => toggleParam("color", colorId)}>
-                    <X size={11} />
-                  </button>
+                  <button onClick={() => toggleParam("color", colorId)}><X size={11} /></button>
                 </span>
               );
             })}
-            {/* Multiple fabric chips */}
             {fabricFilter && selectedFabricNames.map((name, idx) => {
               const fabricId = fabricFilter.split(",")[idx];
               return (
                 <span key={fabricId} className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-100 text-pink-700 text-xs rounded-full">
                   {name}
-                  <button onClick={() => toggleParam("fabric", fabricId)}>
-                    <X size={11} />
-                  </button>
+                  <button onClick={() => toggleParam("fabric", fabricId)}><X size={11} /></button>
                 </span>
               );
             })}
@@ -194,16 +198,10 @@ function ProductListingContent({
         </div>
       )}
 
-      {/* Categories */}
       {rootCats.length > 0 && (
         <div>
-          <button
-            onClick={() => toggleSection("categories")}
-            className="flex items-center justify-between w-full mb-2"
-          >
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Categories
-            </p>
+          <button onClick={() => toggleSection("categories")} className="flex items-center justify-between w-full mb-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Categories</p>
             {expandedFilters.has("categories")
               ? <ChevronDown size={14} className="text-gray-400" />
               : <ChevronRight size={14} className="text-gray-400" />}
@@ -212,11 +210,10 @@ function ProductListingContent({
           {expandedFilters.has("categories") && (
             <ul className="space-y-0.5">
               {rootCats.map((cat) => {
-                const subCats    = getSubCats(cat.id);
-                const isSelected = catFilter === cat.id;
+                const subCats     = getSubCats(cat.id);
+                const isSelected  = catFilter === cat.id;
                 const subSelected = subCats.some((s) => s.id === catFilter);
-                const isExpanded = isSelected || subSelected;
-
+                const isExpanded  = isSelected || subSelected;
                 return (
                   <li key={cat.id}>
                     <div className="flex items-center">
@@ -231,47 +228,31 @@ function ProductListingContent({
                       >
                         {cat.name}
                       </button>
-
                       {subCats.length > 0 && (
-                        <button
-                          onClick={() => toggleSection(`cat-${cat.id}`)}
-                          className="p-2 text-gray-400 hover:text-gray-600"
-                        >
-                          <ChevronRight
-                            size={13}
-                            className={cn(
-                              "transition-transform",
-                              (isExpanded || expandedFilters.has(`cat-${cat.id}`))
-                                ? "rotate-90"
-                                : ""
-                            )}
-                          />
+                        <button onClick={() => toggleSection(`cat-${cat.id}`)} className="p-2 text-gray-400 hover:text-gray-600">
+                          <ChevronRight size={13} className={cn("transition-transform", (isExpanded || expandedFilters.has(`cat-${cat.id}`)) ? "rotate-90" : "")} />
                         </button>
                       )}
                     </div>
-
-                    {(isExpanded || expandedFilters.has(`cat-${cat.id}`)) &&
-                      subCats.length > 0 && (
-                        <ul className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-pink-100 pl-2">
-                          {subCats.map((sub) => (
-                            <li key={sub.id}>
-                              <button
-                                onClick={() =>
-                                  updateParam("category", sub.id === catFilter ? null : sub.id)
-                                }
-                                className={cn(
-                                  "w-full text-left px-3 py-1.5 rounded-lg text-xs transition-all border-l-2",
-                                  catFilter === sub.id
-                                    ? "border-pink-400 bg-pink-50 text-pink-700 font-medium"
-                                    : "border-transparent text-gray-500 hover:bg-gray-50"
-                                )}
-                              >
-                                {sub.name}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                    {(isExpanded || expandedFilters.has(`cat-${cat.id}`)) && subCats.length > 0 && (
+                      <ul className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-pink-100 pl-2">
+                        {subCats.map((sub) => (
+                          <li key={sub.id}>
+                            <button
+                              onClick={() => updateParam("category", sub.id === catFilter ? null : sub.id)}
+                              className={cn(
+                                "w-full text-left px-3 py-1.5 rounded-lg text-xs transition-all border-l-2",
+                                catFilter === sub.id
+                                  ? "border-pink-400 bg-pink-50 text-pink-700 font-medium"
+                                  : "border-transparent text-gray-500 hover:bg-gray-50"
+                              )}
+                            >
+                              {sub.name}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 );
               })}
@@ -280,19 +261,14 @@ function ProductListingContent({
         </div>
       )}
 
-      {/* Color - multi‑select */}
       {filterData.colors.length > 0 && (
         <div>
-          <button
-            onClick={() => toggleSection("color")}
-            className="flex items-center justify-between w-full mb-2"
-          >
+          <button onClick={() => toggleSection("color")} className="flex items-center justify-between w-full mb-2">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Color</p>
             {expandedFilters.has("color")
               ? <ChevronDown size={14} className="text-gray-400" />
               : <ChevronRight size={14} className="text-gray-400" />}
           </button>
-
           {expandedFilters.has("color") && (
             <ul className="space-y-0.5">
               {filterData.colors.map((c) => {
@@ -313,9 +289,7 @@ function ProductListingContent({
                         style={{ backgroundColor: c.value.toLowerCase().replace(/\s+/g, "") }}
                       />
                       {c.value}
-                      {isSelected && (
-                        <CheckCircle size={13} className="ml-auto text-pink-500" />
-                      )}
+                      {isSelected && <CheckCircle size={13} className="ml-auto text-pink-500" />}
                     </button>
                   </li>
                 );
@@ -325,19 +299,14 @@ function ProductListingContent({
         </div>
       )}
 
-      {/* Fabric - multi‑select */}
       {filterData.fabrics.length > 0 && (
         <div>
-          <button
-            onClick={() => toggleSection("fabric")}
-            className="flex items-center justify-between w-full mb-2"
-          >
+          <button onClick={() => toggleSection("fabric")} className="flex items-center justify-between w-full mb-2">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Fabric</p>
             {expandedFilters.has("fabric")
               ? <ChevronDown size={14} className="text-gray-400" />
               : <ChevronRight size={14} className="text-gray-400" />}
           </button>
-
           {expandedFilters.has("fabric") && (
             <div className="flex flex-wrap gap-2">
               {filterData.fabrics.map((f) => {
@@ -366,14 +335,11 @@ function ProductListingContent({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      {/* Header */}
       <div className="flex items-start sm:items-center justify-between gap-3 mb-6 flex-wrap">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{title}</h1>
           {!loading && (
-            <p className="text-sm text-gray-400 mt-0.5">
-              {total} product{total !== 1 ? "s" : ""}
-            </p>
+            <p className="text-sm text-gray-400 mt-0.5">{total} product{total !== 1 ? "s" : ""}</p>
           )}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -392,20 +358,14 @@ function ProductListingContent({
             onClick={() => setFilterOpen(true)}
             className={cn(
               "md:hidden flex items-center gap-2 px-3 py-2 border rounded-lg text-sm transition-colors",
-              hasFilters
-                ? "border-pink-300 bg-pink-50 text-pink-700"
-                : "border-gray-200 text-gray-700"
+              hasFilters ? "border-pink-300 bg-pink-50 text-pink-700" : "border-gray-200 text-gray-700"
             )}
           >
             <SlidersHorizontal size={16} />
             Filter
             {hasFilters && (
               <span className="bg-pink-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                {
-                  (catFilter ? 1 : 0) +
-                  (colorFilter ? colorFilter.split(",").length : 0) +
-                  (fabricFilter ? fabricFilter.split(",").length : 0)
-                }
+                {(catFilter ? 1 : 0) + (colorFilter ? colorFilter.split(",").length : 0) + (fabricFilter ? fabricFilter.split(",").length : 0)}
               </span>
             )}
           </button>
@@ -413,30 +373,19 @@ function ProductListingContent({
       </div>
 
       <div className="flex gap-6 lg:gap-8">
-        {/* Desktop sidebar */}
         <aside className="hidden md:block w-52 lg:w-56 flex-shrink-0">
-          <div className="sticky top-24">
-            {filterPanel}
-          </div>
+          <div className="sticky top-24">{filterPanel}</div>
         </aside>
 
-        {/* Mobile filter drawer */}
         {filterOpen && (
           <div className="fixed inset-0 z-50 flex md:hidden">
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setFilterOpen(false)}
-            />
+            <div className="absolute inset-0 bg-black/40" onClick={() => setFilterOpen(false)} />
             <div className="relative ml-auto w-72 h-full bg-white overflow-y-auto">
               <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
                 <p className="font-semibold text-gray-900">Filters</p>
-                <button onClick={() => setFilterOpen(false)}>
-                  <X size={20} className="text-gray-500" />
-                </button>
+                <button onClick={() => setFilterOpen(false)}><X size={20} className="text-gray-500" /></button>
               </div>
-              <div className="p-4">
-                {filterPanel}
-              </div>
+              <div className="p-4">{filterPanel}</div>
               {hasFilters && (
                 <div className="sticky bottom-0 p-4 bg-white border-t border-gray-100">
                   <button
@@ -451,7 +400,6 @@ function ProductListingContent({
           </div>
         )}
 
-        {/* Product grid */}
         <div className="flex-1 min-w-0">
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
@@ -482,7 +430,6 @@ function ProductListingContent({
                   <ProductCard key={product.id} product={product} priority={i < 4} />
                 ))}
               </div>
-
               {totalPages > 1 && (
                 <div className="mt-10">
                   <Pagination
@@ -500,11 +447,8 @@ function ProductListingContent({
   );
 }
 
-// ─── Public wrapper with Suspense ───────────────────────────────────────────
 export default function ProductListingPage(props: Props) {
   const { searchParams, ...rest } = props;
-  // searchParams is not used in the inner component because it reads from useSearchParams()
-  // But we keep it to satisfy the Props interface.
   return (
     <Suspense
       fallback={
@@ -515,7 +459,13 @@ export default function ProductListingPage(props: Props) {
         </div>
       }
     >
-      <ProductListingContent gender={rest.gender} categoryId={rest.categoryId} title={rest.title} />
+      <ProductListingContent
+        gender={rest.gender}
+        categoryId={rest.categoryId}
+        title={rest.title}
+        initialProducts={rest.initialProducts}
+        initialTotal={rest.initialTotal}
+      />
     </Suspense>
   );
 }

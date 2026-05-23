@@ -21,8 +21,8 @@ export const revalidate = 60;
 
 export default async function SubcategoryPage({ params, searchParams }: Props) {
   const { gender, subcategory } = await params;
-  const sp = await searchParams;
-  const supabase = await createClient();
+  const sp                      = await searchParams;
+  const supabase                = await createClient();
 
   const { data: cat } = await supabase
     .from("categories")
@@ -33,12 +33,23 @@ export default async function SubcategoryPage({ params, searchParams }: Props) {
 
   if (!cat) notFound();
 
+  // Fetch initial products on server
+  const { data: initialProducts, count } = await supabase
+    .from("products")
+    .select("*, category:categories(id,name,slug,gender)", { count: "exact" })
+    .eq("is_active", true)
+    .eq("category_id", cat.id)
+    .order("created_at", { ascending: false })
+    .range(0, 19);
+
   return (
     <ProductListingPage
       gender={gender as Gender}
       categoryId={cat.id}
       title={cat.name}
       searchParams={sp}
+      initialProducts={initialProducts ?? []}
+      initialTotal={count ?? 0}
     />
   );
 }

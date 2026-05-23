@@ -1,5 +1,5 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import ProductListingPage from "@/components/listing/ProductListingPage";
 import type { Metadata } from "next";
 import type { Gender } from "@/types/database";
@@ -27,21 +27,35 @@ export default async function GenderPage({ params, searchParams }: Props) {
   const sp         = await searchParams;
   if (!GENDER_META[gender]) notFound();
 
+  const supabase = await createClient();
+
+  // Fetch all category IDs for this gender
+  const { data: cats } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("gender", gender)
+    .eq("is_active", true);
+
+  const categoryIds = cats?.map((c) => c.id) ?? [];
+
+  // Fetch initial products on server
+  const { data: initialProducts, count } = categoryIds.length > 0
+    ? await supabase
+        .from("products")
+        .select("*, category:categories(id,name,slug,gender)", { count: "exact" })
+        .eq("is_active", true)
+        .in("category_id", categoryIds)
+        .order("created_at", { ascending: false })
+        .range(0, 19)
+    : { data: [], count: 0 };
+
   return (
-    <Suspense
-      fallback={
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="w-8 h-8 border-2 border-pink-600 border-t-transparent rounded-full animate-spin" />
-          </div>
-        </div>
-      }
-    >
-      <ProductListingPage
-        gender={gender as Gender}
-        title={GENDER_META[gender].title}
-        searchParams={{ ...sp, gender }}
-      />
-    </Suspense>
+    <ProductListingPage
+      gender={gender as Gender}
+      title={GENDER_META[gender].title}
+      searchParams={{ ...sp, gender }}
+      initialProducts={initialProducts ?? []}
+      initialTotal={count ?? 0}
+    />
   );
 }
