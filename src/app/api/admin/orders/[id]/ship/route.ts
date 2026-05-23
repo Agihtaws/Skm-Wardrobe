@@ -14,14 +14,27 @@ export async function POST(
     const { id } = await params;
     const admin  = createAdminClient();
 
+    // Step 1 — fetch order + items only (no join)
     const { data: order, error: orderErr } = await admin
-  .from("orders")
-  .select(`*, address:addresses(*), items:order_items(*)`)
-  .eq("id", id)
-  .single();
+      .from("orders")
+      .select(`*, items:order_items(*)`)
+      .eq("id", id)
+      .single();
 
-if (orderErr) return serverError(orderErr);
-if (!order) return notFound("Order");
+    if (orderErr) return serverError(orderErr);
+    if (!order)   return notFound("Order");
+
+    // Step 2 — fetch address separately (reliable, no FK needed)
+    const { data: address } = order.address_id
+      ? await admin.from("addresses").select("*").eq("id", order.address_id).single()
+      : { data: null };
+
+    // Step 3 — log to debug
+    console.log("[Ship] address_id:", order.address_id);
+    console.log("[Ship] address:", JSON.stringify(address));
+
+    if (!address?.pincode)
+      return err("Order has no delivery address");
 
     // Allow: paid, processing, AND pending COD orders
     const canShip =
@@ -33,18 +46,15 @@ if (!order) return notFound("Order");
         `Cannot ship order with status "${order.status}". Must be paid, processing, or pending COD.`
       );
 
-    if (!order.address?.pincode)
-  return err("Order has no delivery address");
-
     const srRes = await createShiprocketOrder({
       order_id:       order.id.slice(0, 8).toUpperCase(),
       order_date:     new Date(order.created_at).toISOString().split("T")[0],
-      customer_name:  order.address.full_name ?? "Customer",
-      customer_phone: order.address.phone ?? "",
-      address:        `${order.address.line1}${order.address.line2 ? ", " + order.address.line2 : ""}`,
-      city:           order.address.city ?? "",
-      state:          order.address.state ?? "",
-      pincode:        order.address.pincode ?? "",
+      customer_name:  address.full_name ?? "Customer",
+      customer_phone: address.phone     ?? "",
+      address:        `${address.line1}${address.line2 ? ", " + address.line2 : ""}`,
+      city:           address.city      ?? "",
+      state:          address.state     ?? "",
+      pincode:        address.pincode   ?? "",
       total:          Number(order.total),
       payment_method: order.payment_method === "cod" ? "cod" : "prepaid",
       items:          (order.items ?? []).map((item: any) => ({
@@ -67,7 +77,7 @@ if (!order) return notFound("Order");
       .from("orders")
       .update({
         status:                 "processing",
-        shiprocket_order_id:    String(srRes.order_id ?? ""),
+        shiprocket_order_id:    String(srRes.order_id    ?? ""),
         shiprocket_shipment_id: String(srRes.shipment_id ?? ""),
       })
       .eq("id", id);
