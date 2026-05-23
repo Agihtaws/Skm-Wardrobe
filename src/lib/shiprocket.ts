@@ -66,12 +66,14 @@ export async function createShiprocketOrder(params: {
       order_id:               params.order_id,
       order_date:             params.order_date,
       pickup_location:        "Primary",
-      channel_id:             process.env.SHIPROCKET_CHANNEL_ID,
+      channel_id:             process.env.SHIPROCKET_CHANNEL_ID
+                                ? Number(process.env.SHIPROCKET_CHANNEL_ID)
+                                : undefined,
       billing_customer_name:  params.customer_name,
       billing_last_name:      "",
       billing_address:        params.address,
       billing_city:           params.city,
-      billing_pincode: parseInt(params.pincode, 10),
+      billing_pincode:        parseInt(params.pincode, 10),   // ✅ integer
       billing_state:          params.state,
       billing_country:        "India",
       billing_email:          "customer@skmwardrobe.in",
@@ -176,7 +178,7 @@ export async function createReturn(params: {
       pickup_city:            params.city,
       pickup_state:           params.state,
       pickup_country:         STORE_COUNTRY,
-      pickup_pincode:         params.pincode,
+      pickup_pincode:         parseInt(params.pincode, 10),   // ✅ integer
 
       // Return to your store
       shipping_customer_name: STORE_NAME,
@@ -185,7 +187,7 @@ export async function createReturn(params: {
       shipping_city:          STORE_CITY,
       shipping_state:         STORE_STATE,
       shipping_country:       STORE_COUNTRY,
-      shipping_pincode:       STORE_PINCODE,
+      shipping_pincode:       parseInt(STORE_PINCODE, 10),    // ✅ integer
 
       payment_method: "Prepaid",
       sub_total:      params.items.reduce((s, i) => s + i.price * i.qty, 0),
