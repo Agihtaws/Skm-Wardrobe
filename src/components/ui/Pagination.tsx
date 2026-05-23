@@ -13,6 +13,11 @@ interface Props {
 export default function Pagination({ page, totalPages, onPageChange }: Props) {
   if (totalPages <= 1) return null;
 
+  const changePage = (p: number) => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    onPageChange(p);
+  };
+
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1).filter(
     (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1
   );
@@ -20,7 +25,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Props) {
   return (
     <div className="flex items-center justify-center gap-1">
       <button
-        onClick={() => onPageChange(page - 1)}
+        onClick={() => changePage(page - 1)}
         disabled={page === 1}
         className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
       >
@@ -30,13 +35,12 @@ export default function Pagination({ page, totalPages, onPageChange }: Props) {
       {pages.map((p, i) => {
         const prev = pages[i - 1];
         return (
-          // key must be on Fragment, not on children inside it
           <Fragment key={p}>
             {prev && p - prev > 1 && (
               <span className="px-2 text-gray-400 text-sm">…</span>
             )}
             <button
-              onClick={() => onPageChange(p)}
+              onClick={() => changePage(p)}
               className={cn(
                 "w-9 h-9 rounded-lg text-sm font-medium transition-colors",
                 p === page
@@ -51,7 +55,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Props) {
       })}
 
       <button
-        onClick={() => onPageChange(page + 1)}
+        onClick={() => changePage(page + 1)}
         disabled={page === totalPages}
         className="p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
       >
