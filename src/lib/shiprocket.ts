@@ -71,7 +71,7 @@ export async function createShiprocketOrder(params: {
       billing_last_name:      "",
       billing_address:        params.address,
       billing_city:           params.city,
-      billing_pincode:        params.pincode,
+      billing_pincode: parseInt(params.pincode, 10),
       billing_state:          params.state,
       billing_country:        "India",
       billing_email:          "customer@skmwardrobe.in",

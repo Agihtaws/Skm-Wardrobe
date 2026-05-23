@@ -14,13 +14,14 @@ export async function POST(
     const { id } = await params;
     const admin  = createAdminClient();
 
-    const { data: order } = await admin
-      .from("orders")
-      .select(`*, address:addresses(*), items:order_items(*)`)
-      .eq("id", id)
-      .single();
+    const { data: order, error: orderErr } = await admin
+  .from("orders")
+  .select(`*, address:addresses(*), items:order_items(*)`)
+  .eq("id", id)
+  .single();
 
-    if (!order) return notFound("Order");
+if (orderErr) return serverError(orderErr);
+if (!order) return notFound("Order");
 
     // Allow: paid, processing, AND pending COD orders
     const canShip =
@@ -32,8 +33,8 @@ export async function POST(
         `Cannot ship order with status "${order.status}". Must be paid, processing, or pending COD.`
       );
 
-    if (!order.address)
-      return err("Order has no delivery address");
+    if (!order.address?.pincode)
+  return err("Order has no delivery address");
 
     const srRes = await createShiprocketOrder({
       order_id:       order.id.slice(0, 8).toUpperCase(),
