@@ -45,33 +45,33 @@ export async function POST(
         `Cannot ship order with status "${order.status}". Must be paid, processing, or pending COD.`
       );
 
-    // Step 4 — build unique order_id to avoid Shiprocket conflicts on retry
+    // Step 4 — unique order_id per attempt to avoid Shiprocket conflicts
     const srOrderId = `${order.id.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
 
-    // Step 5 — log exact payload before sending
-    const payload = {
+    // Step 5 — log exact payload
+    const srPayload = {
       order_id:       srOrderId,
-      customer_name:  address.full_name  ?? "Customer",
-      customer_phone: address.phone      ?? "",
-      address:        `${address.line1}${address.line2 ? ", " + address.line2 : ""}`,
-      city:           address.city       ?? "",
-      state:          address.state      ?? "",
-      pincode:        address.pincode    ?? "",
+      customer_name:  address.full_name?.trim()  ?? "Customer",
+      customer_phone: address.phone?.trim()       ?? "",
+      address:        `${address.line1?.trim()}${address.line2 ? ", " + address.line2.trim() : ""}`,
+      city:           address.city?.trim()        ?? "",
+      state:          address.state?.trim()       ?? "",
+      pincode:        address.pincode?.trim()     ?? "",
       total:          Number(order.total),
       payment_method: order.payment_method === "cod" ? "cod" : "prepaid",
       items_count:    (order.items ?? []).length,
     };
-    console.log("[Ship] Sending to Shiprocket:", JSON.stringify(payload));
+    console.log("[Ship] Sending to Shiprocket:", JSON.stringify(srPayload));
 
     const srRes = await createShiprocketOrder({
       order_id:       srOrderId,
       order_date:     new Date(order.created_at).toISOString().split("T")[0],
-      customer_name:  address.full_name  ?? "Customer",
-      customer_phone: address.phone      ?? "",
-      address:        `${address.line1}${address.line2 ? ", " + address.line2 : ""}`,
-      city:           address.city       ?? "",
-      state:          address.state      ?? "",
-      pincode:        address.pincode    ?? "",
+      customer_name:  address.full_name?.trim()  ?? "Customer",
+      customer_phone: address.phone?.trim()       ?? "",
+      address:        `${address.line1?.trim()}${address.line2 ? ", " + address.line2.trim() : ""}`,
+      city:           address.city?.trim()        ?? "",   // ✅ trailing space removed
+      state:          address.state?.trim()       ?? "",
+      pincode:        address.pincode?.trim()     ?? "",
       total:          Number(order.total),
       payment_method: order.payment_method === "cod" ? "cod" : "prepaid",
       items:          (order.items ?? []).map((item: any) => ({
@@ -84,12 +84,11 @@ export async function POST(
 
     console.log("[Shiprocket] Response:", JSON.stringify(srRes));
 
-    // Shiprocket returns status 1 for success
     if (srRes.status_code && srRes.status_code !== 1) {
       return err(`Shiprocket error: ${srRes.message ?? JSON.stringify(srRes)}`);
     }
 
-    // Step 6 — update order with Shiprocket IDs only (no tracking/AWB needed)
+    // Step 6 — update order with Shiprocket IDs
     await admin
       .from("orders")
       .update({

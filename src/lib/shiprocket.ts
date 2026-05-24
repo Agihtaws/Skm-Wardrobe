@@ -29,7 +29,7 @@ export async function getSRToken(): Promise<string> {
   if (!json.token) throw new Error("Shiprocket login failed");
 
   cachedToken = json.token;
-  tokenExpiry = Date.now() + 23 * 60 * 60 * 1000; // 23 hours
+  tokenExpiry = Date.now() + 23 * 60 * 60 * 1000;
   return cachedToken!;
 }
 
@@ -65,7 +65,7 @@ export async function createShiprocketOrder(params: {
     body:   JSON.stringify({
       order_id:               params.order_id,
       order_date:             params.order_date,
-      pickup_location:        "Primary",
+      pickup_location:        "Home",                          // ✅ matches Shiprocket nickname
       channel_id:             process.env.SHIPROCKET_CHANNEL_ID
                                 ? Number(process.env.SHIPROCKET_CHANNEL_ID)
                                 : undefined,
@@ -73,7 +73,7 @@ export async function createShiprocketOrder(params: {
       billing_last_name:      "",
       billing_address:        params.address,
       billing_city:           params.city,
-      billing_pincode:        params.pincode,        // ✅ string as per Shiprocket docs
+      billing_pincode:        params.pincode,
       billing_state:          params.state,
       billing_country:        "India",
       billing_email:          "customer@skmwardrobe.in",
@@ -171,7 +171,6 @@ export async function createReturn(params: {
       order_id:               params.order_id,
       channel_order_id:       params.channel_order_id,
 
-      // Pickup from customer
       pickup_customer_name:   params.customer_name,
       pickup_phone:           params.customer_phone,
       pickup_address:         params.address,
@@ -180,7 +179,6 @@ export async function createReturn(params: {
       pickup_country:         STORE_COUNTRY,
       pickup_pincode:         params.pincode,
 
-      // Return to your store
       shipping_customer_name: STORE_NAME,
       shipping_phone:         STORE_PHONE,
       shipping_address:       STORE_ADDRESS,
