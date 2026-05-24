@@ -20,63 +20,64 @@ export interface ProductVariant {
 }
 
 export interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  price: number;
-  regular_price: number;
-  sell_price: number;
-  gst_rate: number;
+  id:              string;
+  name:            string;
+  slug:            string;
+  description:     string | null;
+  price:           number;
+  regular_price:   number;
+  sell_price:      number;
+  gst_rate:        number;
   shipping_charge: number;
-  stock: number;
-  images: string[];
-  category_id: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  category?: Category;
+  stock:           number;
+  weight_kg:       number;        // ✅ added
+  images:          string[];
+  category_id:     string | null;
+  is_active:       boolean;
+  created_at:      string;
+  updated_at:      string;
+  category?:           Category;
   product_attributes?: ProductAttribute[];
-  variants?: ProductVariant[];
+  variants?:           ProductVariant[];
 }
 
 export interface Profile {
-  id: string;
-  full_name: string | null;
-  phone: string | null;
+  id:         string;
+  full_name:  string | null;
+  phone:      string | null;
   avatar_url: string | null;
-  role: UserRole;
+  role:       UserRole;
   created_at: string;
   updated_at: string;
 }
 
 export interface Address {
-  id: string;
-  user_id: string;
-  full_name: string;
-  phone: string;
-  line1: string;
-  line2: string | null;
-  city: string;
-  state: string;
-  pincode: string;
+  id:         string;
+  user_id:    string;
+  full_name:  string;
+  phone:      string;
+  line1:      string;
+  line2:      string | null;
+  city:       string;
+  state:      string;
+  pincode:    string;
   is_default: boolean;
   created_at: string;
 }
 
 export interface Order {
-  id: string;
-  user_id: string;
-  address_id: string | null;
-  status: OrderStatus;
-  total: number;
-  razorpay_order_id: string | null;
+  id:                  string;
+  user_id:             string;
+  address_id:          string | null;
+  status:              OrderStatus;
+  total:               number;
+  razorpay_order_id:   string | null;
   razorpay_payment_id: string | null;
-  delhivery_awb: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  items?: OrderItem[];
+  delhivery_awb:       string | null;
+  notes:               string | null;
+  created_at:          string;
+  updated_at:          string;
+  items?:   OrderItem[];
   address?: Address;
 }
 
@@ -102,43 +103,43 @@ export interface CartItem {
   product_name?: string;
   created_at:   string;
   updated_at:   string;
-  product?:     Product;
-  variant?:     ProductVariant;
+  product?: Product;
+  variant?: ProductVariant;
 }
 
 export interface Attribute {
-  id: string;
-  name: string;
+  id:         string;
+  name:       string;
   created_at: string;
   values?: AttributeValue[];
 }
 
 export interface AttributeValue {
-  id: string;
+  id:           string;
   attribute_id: string;
-  value: string;
-  created_at: string;
+  value:        string;
+  created_at:   string;
   attribute?: Attribute;
 }
 
 export interface ProductAttribute {
-  id: string;
-  product_id: string;
-  attribute_id: string;
+  id:                 string;
+  product_id:         string;
+  attribute_id:       string;
   attribute_value_id: string;
-  attribute?: Attribute;
+  attribute?:       Attribute;
   attribute_value?: AttributeValue;
 }
 
 export interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  gender: Gender | null;
-  parent_id: string | null;
+  id:         string;
+  name:       string;
+  slug:       string;
+  gender:     Gender | null;
+  parent_id:  string | null;
   sort_order: number;
-  is_active: boolean;
-  image_url: string | null;
+  is_active:  boolean;
+  image_url:  string | null;
   created_at: string;
   updated_at: string;
 }

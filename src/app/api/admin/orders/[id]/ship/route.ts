@@ -14,17 +14,17 @@ export async function POST(
     const { id } = await params;
     const admin  = createAdminClient();
 
-    // Step 1 — fetch order + items
+    // Step 1 — fetch order + items with product weight
     const { data: order, error: orderErr } = await admin
       .from("orders")
-      .select(`*, items:order_items(*)`)
+      .select(`*, items:order_items(*, product:products(weight_kg))`)
       .eq("id", id)
       .single();
 
     if (orderErr) return serverError(orderErr);
     if (!order)   return notFound("Order");
 
-    // Step 2 — fetch address separately by address_id
+    // Step 2 — fetch address separately
     const { data: address } = order.address_id
       ? await admin.from("addresses").select("*").eq("id", order.address_id).single()
       : { data: null };
@@ -41,27 +41,29 @@ export async function POST(
       (order.status === "pending" && order.payment_method === "cod");
 
     if (!canShip)
-      return err(
-        `Cannot ship order with status "${order.status}". Must be paid, processing, or pending COD.`
-      );
+      return err(`Cannot ship order with status "${order.status}". Must be paid, processing, or pending COD.`);
 
-    // Step 4 — unique order_id per attempt to avoid Shiprocket conflicts
+    // Step 4 — calculate total weight from items
+    const totalWeight = Math.max(
+      0.1,  // minimum 0.1 Kg
+      (order.items ?? []).reduce((sum: number, item: any) => {
+        const w = Number(item.product?.weight_kg ?? 0.3);
+        return sum + (w * item.quantity);
+      }, 0)
+    );
+    console.log("[Ship] Total weight (kg):", totalWeight);
+
+    // Step 5 — unique order_id per attempt
     const srOrderId = `${order.id.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
 
-    // Step 5 — log exact payload
-    const srPayload = {
+    console.log("[Ship] Sending to Shiprocket:", JSON.stringify({
       order_id:       srOrderId,
-      customer_name:  address.full_name?.trim()  ?? "Customer",
-      customer_phone: address.phone?.trim()       ?? "",
-      address:        `${address.line1?.trim()}${address.line2 ? ", " + address.line2.trim() : ""}`,
-      city:           address.city?.trim()        ?? "",
-      state:          address.state?.trim()       ?? "",
-      pincode:        address.pincode?.trim()     ?? "",
-      total:          Number(order.total),
-      payment_method: order.payment_method === "cod" ? "cod" : "prepaid",
+      customer_name:  address.full_name?.trim(),
+      city:           address.city?.trim(),
+      pincode:        address.pincode?.trim(),
+      weight:         totalWeight,
       items_count:    (order.items ?? []).length,
-    };
-    console.log("[Ship] Sending to Shiprocket:", JSON.stringify(srPayload));
+    }));
 
     const srRes = await createShiprocketOrder({
       order_id:       srOrderId,
@@ -69,10 +71,11 @@ export async function POST(
       customer_name:  address.full_name?.trim()  ?? "Customer",
       customer_phone: address.phone?.trim()       ?? "",
       address:        `${address.line1?.trim()}${address.line2 ? ", " + address.line2.trim() : ""}`,
-      city:           address.city?.trim()        ?? "",   // ✅ trailing space removed
+      city:           address.city?.trim()        ?? "",
       state:          address.state?.trim()       ?? "",
       pincode:        address.pincode?.trim()     ?? "",
       total:          Number(order.total),
+      weight:         totalWeight,                // ✅ dynamic weight
       payment_method: order.payment_method === "cod" ? "cod" : "prepaid",
       items:          (order.items ?? []).map((item: any) => ({
         name:  item.product_name,
@@ -88,7 +91,6 @@ export async function POST(
       return err(`Shiprocket error: ${srRes.message ?? JSON.stringify(srRes)}`);
     }
 
-    // Step 6 — update order with Shiprocket IDs
     await admin
       .from("orders")
       .update({

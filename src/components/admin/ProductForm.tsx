@@ -26,19 +26,20 @@ export default function ProductForm({ product, categories, attributes }: Props) 
 
   const [saving, setSaving] = useState(false);
 
-  const [name, setName]               = useState(product?.name ?? "");
-  const [slug, setSlug]               = useState(product?.slug ?? "");
+  const [name,        setName]        = useState(product?.name        ?? "");
+  const [slug,        setSlug]        = useState(product?.slug        ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
-  const [gender, setGender]           = useState<string>(
+  const [gender,      setGender]      = useState<string>(
     categories.find((c) => c.id === product?.category_id)?.gender ?? "women"
   );
-  const [parentCatId, setParentCatId] = useState<string>("");
-  const [categoryId, setCategoryId]   = useState<string>(product?.category_id ?? "");
-  const [regularPrice, setRegularPrice] = useState(product?.regular_price?.toString() ?? "");
-  const [sellPrice, setSellPrice]       = useState(product?.sell_price?.toString() ?? product?.price?.toString() ?? "");
-  const [stock, setStock]               = useState(product?.stock?.toString() ?? "");
-  const [isActive, setIsActive]         = useState(product?.is_active ?? true);
-  const [images, setImages]             = useState<string[]>(product?.images ?? []);
+  const [parentCatId,   setParentCatId]   = useState<string>("");
+  const [categoryId,    setCategoryId]    = useState<string>(product?.category_id ?? "");
+  const [regularPrice,  setRegularPrice]  = useState(product?.regular_price?.toString() ?? "");
+  const [sellPrice,     setSellPrice]     = useState(product?.sell_price?.toString() ?? product?.price?.toString() ?? "");
+  const [stock,         setStock]         = useState(product?.stock?.toString() ?? "");
+  const [weightKg,      setWeightKg]      = useState(product?.weight_kg?.toString() ?? "0.3");  // ✅
+  const [isActive,      setIsActive]      = useState(product?.is_active ?? true);
+  const [images,        setImages]        = useState<string[]>(product?.images ?? []);
 
   const [attrEntries, setAttrEntries] = useState<AttributeEntry[]>(() =>
     product?.product_attributes?.map((pa) => ({
@@ -46,10 +47,9 @@ export default function ProductForm({ product, categories, attributes }: Props) 
       valueId: pa.attribute_value_id,
     })) ?? []
   );
-  const [newAttrId, setNewAttrId]   = useState("");
+  const [newAttrId,  setNewAttrId]  = useState("");
   const [newValueId, setNewValueId] = useState("");
 
-  // ── Variants ────────────────────────────────────────────────────────────
   const [variants, setVariants] = useState<{ size: string; stock: string }[]>(() =>
     product?.variants?.map((v) => ({
       size:  v.size,
@@ -70,11 +70,9 @@ export default function ProductForm({ product, categories, attributes }: Props) 
 
   const variantTotalStock = variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
 
-  // Keep top-level stock field in sync with variant totals
   useEffect(() => {
     if (variants.length > 0) setStock(String(variantTotalStock));
   }, [variantTotalStock, variants.length]);
-  // ────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (product?.category_id) {
@@ -106,8 +104,7 @@ export default function ProductForm({ product, categories, attributes }: Props) 
     if (!newAttrId || !newValueId) { toast.error("Select attribute and value"); return; }
     if (attrEntries.some((e) => e.attrId === newAttrId && e.valueId === newValueId)) { toast.error("Already added"); return; }
     setAttrEntries((prev) => [...prev, { attrId: newAttrId, valueId: newValueId }]);
-    setNewAttrId("");
-    setNewValueId("");
+    setNewAttrId(""); setNewValueId("");
   };
 
   const removeAttrEntry = (idx: number) =>
@@ -139,6 +136,7 @@ export default function ProductForm({ product, categories, attributes }: Props) 
       gst_rate:        GST_RATE,
       shipping_charge: SHIPPING_CHARGE,
       stock:           variants.length > 0 ? variantTotalStock : parseInt(stock),
+      weight_kg:       parseFloat(weightKg) || 0.3,   // ✅
       is_active:       isActive,
       images,
       product_attributes: attrEntries,
@@ -157,133 +155,105 @@ export default function ProductForm({ product, categories, attributes }: Props) 
     const json = await res.json();
     if (!json.success) { toast.error(json.error ?? "Save failed"); setSaving(false); return; }
 
-    toast.success(isEdit ? "Product updated" : "Product created");
+    toast.success(isEdit ? "Product updated!" : "Product created!");
     router.push("/admin/products");
     router.refresh();
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-3 sm:p-5 lg:p-6 pt-16 lg:pt-6 max-w-5xl space-y-5">
-
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            {isEdit ? "Edit Product" : "Add New Product"}
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">{isEdit ? product.name : "Fill all required fields"}</p>
-        </div>
-        <div className="flex gap-2 sm:gap-3">
-          <button type="button" onClick={() => router.back()}
-            className="flex-1 sm:flex-none px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50">
-            Cancel
-          </button>
-          <button type="submit" disabled={saving}
-            className="flex-1 sm:flex-none px-5 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium rounded-lg disabled:opacity-60">
-            {saving ? "Saving…" : isEdit ? "Update Product" : "Create Product"}
-          </button>
-        </div>
+    <form onSubmit={handleSubmit} className="max-w-5xl mx-auto p-4 sm:p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-bold text-gray-900">{isEdit ? "Edit Product" : "New Product"}</h1>
+        <button type="submit" disabled={saving}
+          className="px-5 py-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-semibold rounded-xl disabled:opacity-60 transition-colors">
+          {saving ? "Saving…" : isEdit ? "Save Changes" : "Create Product"}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
 
-        {/* LEFT */}
-        <div className="lg:col-span-2 space-y-5">
+        {/* LEFT — main content */}
+        <div className="space-y-6">
 
-          {/* Basic Info */}
+          {/* Basic info */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 space-y-4">
-            <h2 className="font-semibold text-gray-800">Basic Information</h2>
+            <h2 className="font-semibold text-gray-800">Basic Info</h2>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Product name *</label>
               <input required value={name} onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="e.g. Umbrella Kurtis White Pink"
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500" />
+                placeholder="e.g. Silk Saree with Blouse"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Slug (URL)</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">URL slug</label>
               <input value={slug} onChange={(e) => setSlug(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono" />
-              <p className="text-xs text-gray-400 mt-1 break-all">skmwardrobe.in/products/{slug || "auto-generated"}</p>
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono text-xs" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4}
-                placeholder="Product description…"
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 resize-none" />
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)}
+                rows={4} placeholder="Describe the product…"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 resize-none" />
             </div>
           </div>
 
           {/* Images */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-            <h2 className="font-semibold text-gray-800 mb-1">Product Images *</h2>
-            <p className="text-xs text-gray-400 mb-4">First image = main thumbnail.</p>
+            <h2 className="font-semibold text-gray-800 mb-3">Images *</h2>
             <ImageUploader images={images} onChange={setImages} />
           </div>
 
           {/* Attributes */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-            <h2 className="font-semibold text-gray-800 mb-1">Attributes</h2>
-            <p className="text-xs text-gray-400 mb-4">Add Color, Fabric, Neck etc.</p>
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 space-y-3">
+            <h2 className="font-semibold text-gray-800">Attributes <span className="text-xs font-normal text-gray-400">(colour, fabric, etc.)</span></h2>
             {attrEntries.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-2 pb-1">
                 {attrEntries.map((entry, idx) => {
                   const { attr, value } = getAttrLabel(entry);
                   return (
-                    <span key={idx} className="inline-flex items-center gap-2 px-3 py-1.5 bg-pink-50 text-pink-700 border border-pink-200 text-sm rounded-full">
-                      <span className="font-medium">{attr}:</span> {value}
-                      <button type="button" onClick={() => removeAttrEntry(idx)} className="text-pink-400 hover:text-pink-700"><X size={13} /></button>
+                    <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-50 text-pink-700 text-xs rounded-full border border-pink-100">
+                      {attr}: {value}
+                      <button type="button" onClick={() => removeAttrEntry(idx)} className="hover:text-red-500">
+                        <X size={11} />
+                      </button>
                     </span>
                   );
                 })}
               </div>
             )}
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:items-end">
-              <div className="flex-1 min-w-0 sm:min-w-[140px]">
-                <label className="block text-xs text-gray-500 mb-1">Attribute</label>
-                <select value={newAttrId} onChange={(e) => { setNewAttrId(e.target.value); setNewValueId(""); }}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
-                  <option value="">Select attribute</option>
-                  {attributes.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-              </div>
-              <div className="flex-1 min-w-0 sm:min-w-[140px]">
-                <label className="block text-xs text-gray-500 mb-1">Value</label>
-                <select value={newValueId} onChange={(e) => setNewValueId(e.target.value)} disabled={!newAttrId}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 disabled:opacity-50">
-                  <option value="">Select value</option>
-                  {attributes.find((a) => a.id === newAttrId)?.values?.map((v) => (
-                    <option key={v.id} value={v.id}>{v.value}</option>
-                  ))}
-                </select>
-              </div>
+            <div className="flex gap-2">
+              <select value={newAttrId} onChange={(e) => { setNewAttrId(e.target.value); setNewValueId(""); }}
+                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                <option value="">Select attribute</option>
+                {attributes.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              <select value={newValueId} onChange={(e) => setNewValueId(e.target.value)}
+                disabled={!newAttrId}
+                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 disabled:opacity-50">
+                <option value="">Select value</option>
+                {attributes.find((a) => a.id === newAttrId)?.values?.map((v) => (
+                  <option key={v.id} value={v.id}>{v.value}</option>
+                ))}
+              </select>
               <button type="button" onClick={addAttrEntry}
-                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors">
-                <Plus size={15} /> Add
+                className="px-3 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors">
+                <Plus size={16} />
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-3 flex items-center gap-1"><Info size={12} /> Go to Attributes page to add new colors, fabrics etc.</p>
           </div>
 
-          {/* ── Sizes & Stock ── */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
-            <h2 className="font-semibold text-gray-800 mb-1">Sizes & Stock</h2>
-            <p className="text-xs text-gray-400 mb-4">
-              If your product has sizes (S/M/L etc.), add them here with stock per size.
-              Leave empty for single-size products — the stock field on the right will be used.
-            </p>
-
-            {/* Quick-add buttons */}
-            <div className="flex flex-wrap gap-2 mb-4">
+          {/* Sizes / Variants */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5 space-y-3">
+            <h2 className="font-semibold text-gray-800">Sizes <span className="text-xs font-normal text-gray-400">(optional — for size-specific stock)</span></h2>
+            <div className="flex flex-wrap gap-2">
               {COMMON_SIZES.map((size) => (
                 <button key={size} type="button" onClick={() => addVariant(size)}
                   disabled={!!variants.find((v) => v.size === size)}
-                  className="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:border-pink-400 hover:bg-pink-50 hover:text-pink-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                  + {size}
+                  className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-pink-50 hover:border-pink-300 hover:text-pink-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                  {size}
                 </button>
               ))}
             </div>
-
-            {/* Custom size */}
             <div className="flex gap-2 mb-4">
               <input id="custom-size-input" placeholder="Custom size (e.g. 38, 40, 2XL)"
                 className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -304,8 +274,6 @@ export default function ProductForm({ product, categories, attributes }: Props) 
                 Add
               </button>
             </div>
-
-            {/* Variant rows */}
             {variants.length > 0 ? (
               <div className="space-y-2">
                 <div className="grid grid-cols-3 gap-2 text-xs font-semibold text-gray-500 uppercase px-1">
@@ -318,14 +286,11 @@ export default function ProductForm({ product, categories, attributes }: Props) 
                       onChange={(e) => updateVariantStock(i, e.target.value)}
                       className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500" />
                     <button type="button" onClick={() => removeVariant(i)}
-                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-center">
-                      ✕
-                    </button>
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-center">✕</button>
                   </div>
                 ))}
                 <p className="text-xs text-gray-400 pt-1">
-                  Total stock: <span className="font-semibold text-gray-700">{variantTotalStock}</span> pieces
-                  {" "}— overwrites the stock field automatically.
+                  Total stock: <span className="font-semibold text-gray-700">{variantTotalStock}</span> pieces — overwrites the stock field automatically.
                 </p>
               </div>
             ) : (
@@ -417,6 +382,35 @@ export default function ProductForm({ product, categories, attributes }: Props) 
             <p className="text-xs text-gray-400 mt-1.5">
               {variants.length > 0 ? "Auto-calculated from sizes above." : "0 = hidden from website automatically."}
             </p>
+          </div>
+
+          {/* Weight ✅ NEW */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-5">
+            <h2 className="font-semibold text-gray-800 mb-1">Weight (kg)</h2>
+            <p className="text-xs text-gray-400 mb-3">Used for courier charge calculation</p>
+            <div className="relative">
+              <input
+                type="number" min="0.1" max="5" step="0.05"
+                value={weightKg}
+                onChange={(e) => setWeightKg(e.target.value)}
+                placeholder="0.3"
+                className="w-full px-3 py-2 pr-10 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">kg</span>
+            </div>
+            <div className="flex gap-2 mt-2">
+              {[0.2, 0.3, 0.4, 0.5].map((w) => (
+                <button key={w} type="button"
+                  onClick={() => setWeightKg(String(w))}
+                  className={`flex-1 py-1 text-xs rounded-lg border transition-colors ${
+                    parseFloat(weightKg) === w
+                      ? "bg-pink-600 text-white border-pink-600"
+                      : "border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600"
+                  }`}>
+                  {w}kg
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Status */}

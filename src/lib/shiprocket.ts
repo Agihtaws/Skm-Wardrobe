@@ -1,6 +1,5 @@
 const SR_BASE = "https://apiv2.shiprocket.in/v1/external";
 
-// ── Your store details ────────────────────────────────────────────────────────
 const STORE_PHONE   = "6383399316";
 const STORE_NAME    = "SKM Wardrobe";
 const STORE_ADDRESS = "10/8BIB, Royal Nagar, Keezhakorkai";
@@ -9,7 +8,6 @@ const STORE_STATE   = "Tamil Nadu";
 const STORE_PINCODE = "612401";
 const STORE_COUNTRY = "India";
 
-// ── Token cache ───────────────────────────────────────────────────────────────
 let cachedToken: string | null = null;
 let tokenExpiry: number        = 0;
 
@@ -46,7 +44,6 @@ export async function srFetch(path: string, options: RequestInit = {}): Promise<
   return res.json();
 }
 
-// ── Create forward shipment ───────────────────────────────────────────────────
 export async function createShiprocketOrder(params: {
   order_id:       string;
   order_date:     string;
@@ -57,6 +54,7 @@ export async function createShiprocketOrder(params: {
   state:          string;
   pincode:        string;
   total:          number;
+  weight:         number;         // ✅ per-order weight
   payment_method: "prepaid" | "cod";
   items: { name: string; qty: number; price: number; sku: string }[];
 }) {
@@ -65,7 +63,7 @@ export async function createShiprocketOrder(params: {
     body:   JSON.stringify({
       order_id:               params.order_id,
       order_date:             params.order_date,
-      pickup_location:        "Home",                          // ✅ matches Shiprocket nickname
+      pickup_location:        "Home",
       channel_id:             process.env.SHIPROCKET_CHANNEL_ID
                                 ? Number(process.env.SHIPROCKET_CHANNEL_ID)
                                 : undefined,
@@ -87,15 +85,14 @@ export async function createShiprocketOrder(params: {
       })),
       payment_method: params.payment_method === "cod" ? "COD" : "Prepaid",
       sub_total:      params.total,
-      length:         30,
-      breadth:        25,
-      height:         5,
-      weight:         0.5,
+      length:         25,                    // ✅ correct for folded clothing
+      breadth:        20,
+      height:         2,
+      weight:         params.weight,         // ✅ dynamic per order
     }),
   });
 }
 
-// ── Get shipping label PDF URL ────────────────────────────────────────────────
 export async function getLabelURL(shipment_id: string) {
   return srFetch("/courier/generate/label", {
     method: "POST",
@@ -103,7 +100,6 @@ export async function getLabelURL(shipment_id: string) {
   });
 }
 
-// ── Get invoice PDF URL ───────────────────────────────────────────────────────
 export async function getInvoiceURL(order_ids: string[]) {
   return srFetch("/orders/print/invoice", {
     method: "POST",
@@ -111,7 +107,6 @@ export async function getInvoiceURL(order_ids: string[]) {
   });
 }
 
-// ── Get available couriers for a pincode ─────────────────────────────────────
 export async function getAvailableCouriers(params: {
   pincode:     string;
   cod:         boolean;
@@ -124,7 +119,6 @@ export async function getAvailableCouriers(params: {
   );
 }
 
-// ── Assign courier ────────────────────────────────────────────────────────────
 export async function assignCourier(shipment_id: string, courier_id: number) {
   return srFetch("/courier/assign/awb", {
     method: "POST",
@@ -132,7 +126,6 @@ export async function assignCourier(shipment_id: string, courier_id: number) {
   });
 }
 
-// ── Generate pickup ───────────────────────────────────────────────────────────
 export async function generatePickup(shipment_ids: string[]) {
   return srFetch("/courier/generate/pickup", {
     method: "POST",
@@ -140,12 +133,10 @@ export async function generatePickup(shipment_ids: string[]) {
   });
 }
 
-// ── Track shipment ────────────────────────────────────────────────────────────
 export async function trackShipment(awb: string) {
   return srFetch(`/courier/track/awb/${awb}`);
 }
 
-// ── Cancel shipment ───────────────────────────────────────────────────────────
 export async function cancelShipment(awbs: string[]) {
   return srFetch("/orders/cancel/shipment/awbs", {
     method: "POST",
@@ -153,7 +144,6 @@ export async function cancelShipment(awbs: string[]) {
   });
 }
 
-// ── Create return / reverse pickup ───────────────────────────────────────────
 export async function createReturn(params: {
   order_id:         string;
   channel_order_id: string;
@@ -170,7 +160,6 @@ export async function createReturn(params: {
     body:   JSON.stringify({
       order_id:               params.order_id,
       channel_order_id:       params.channel_order_id,
-
       pickup_customer_name:   params.customer_name,
       pickup_phone:           params.customer_phone,
       pickup_address:         params.address,
@@ -178,7 +167,6 @@ export async function createReturn(params: {
       pickup_state:           params.state,
       pickup_country:         STORE_COUNTRY,
       pickup_pincode:         params.pincode,
-
       shipping_customer_name: STORE_NAME,
       shipping_phone:         STORE_PHONE,
       shipping_address:       STORE_ADDRESS,
@@ -186,7 +174,6 @@ export async function createReturn(params: {
       shipping_state:         STORE_STATE,
       shipping_country:       STORE_COUNTRY,
       shipping_pincode:       STORE_PINCODE,
-
       payment_method: "Prepaid",
       sub_total:      params.items.reduce((s, i) => s + i.price * i.qty, 0),
       order_items:    params.items.map((i) => ({
