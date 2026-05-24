@@ -21,11 +21,11 @@ export default async function OrdersPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status } = await searchParams;
-  const supabase = await createClient();
+  const supabase   = await createClient();
 
   let query = supabase
     .from("orders")
-    .select("id, status, total, created_at, delhivery_awb, razorpay_payment_id")
+    .select("id, status, total, created_at, payment_method, razorpay_payment_id")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -44,7 +44,7 @@ export default async function OrdersPage({
         <p className="text-sm text-gray-500 mt-0.5">{orders?.length ?? 0} orders</p>
       </div>
 
-      {/* ── Status filter tabs — horizontal scroll on mobile ── */}
+      {/* ── Status filter tabs ── */}
       <div className="flex gap-2 mb-5 overflow-x-auto pb-1 scrollbar-hide">
         {STATUSES.map((s) => (
           <Link
@@ -61,7 +61,7 @@ export default async function OrdersPage({
         ))}
       </div>
 
-      {/* ── Mobile card list (hidden on md+) ── */}
+      {/* ── Mobile card list ── */}
       <div className="md:hidden space-y-3">
         {!orders?.length && (
           <p className="text-center text-gray-400 text-sm py-12">No orders found</p>
@@ -76,7 +76,6 @@ export default async function OrdersPage({
                 {order.status}
               </span>
             </div>
-
             <div className="flex items-end justify-between">
               <div className="space-y-0.5">
                 <p className="font-semibold text-gray-900">
@@ -87,14 +86,11 @@ export default async function OrdersPage({
                     day: "2-digit", month: "short", year: "numeric",
                   })}
                 </p>
-                {order.delhivery_awb && (
-                  <p className="text-xs font-mono text-gray-400">{order.delhivery_awb}</p>
-                )}
+                <p className="text-xs text-gray-400">
+                  {order.payment_method === "cod" ? "COD" : "Online"}
+                </p>
               </div>
-              <Link
-                href={`/admin/orders/${order.id}`}
-                className="text-pink-600 text-xs font-medium hover:underline"
-              >
+              <Link href={`/admin/orders/${order.id}`} className="text-pink-600 text-xs font-medium hover:underline">
                 Manage →
               </Link>
             </div>
@@ -102,17 +98,14 @@ export default async function OrdersPage({
         ))}
       </div>
 
-      {/* ── Desktop table (hidden on mobile) ── */}
+      {/* ── Desktop table ── */}
       <div className="hidden md:block bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[580px]">
+          <table className="w-full text-sm min-w-[500px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {["Order ID", "Status", "Amount", "Tracking", "Date", ""].map((h) => (
-                  <th
-                    key={h}
-                    className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
-                  >
+                {["Order ID", "Status", "Payment", "Amount", "Date", ""].map((h) => (
+                  <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
                 ))}
@@ -129,11 +122,11 @@ export default async function OrdersPage({
                       {order.status}
                     </span>
                   </td>
+                  <td className="px-5 py-3 text-xs text-gray-500">
+                    {order.payment_method === "cod" ? "COD" : "Online"}
+                  </td>
                   <td className="px-5 py-3 font-semibold whitespace-nowrap">
                     ₹{Number(order.total).toLocaleString("en-IN")}
-                  </td>
-                  <td className="px-5 py-3 font-mono text-xs text-gray-500">
-                    {order.delhivery_awb ?? "—"}
                   </td>
                   <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
                     {new Date(order.created_at).toLocaleDateString("en-IN", {
@@ -141,10 +134,7 @@ export default async function OrdersPage({
                     })}
                   </td>
                   <td className="px-5 py-3">
-                    <Link
-                      href={`/admin/orders/${order.id}`}
-                      className="text-pink-600 text-xs font-medium hover:underline"
-                    >
+                    <Link href={`/admin/orders/${order.id}`} className="text-pink-600 text-xs font-medium hover:underline">
                       Manage →
                     </Link>
                   </td>

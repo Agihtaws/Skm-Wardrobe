@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Loader2, ExternalLink } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Address } from "@/types/database";
 
@@ -24,7 +24,6 @@ const STATUS_BADGE: Record<string, string> = {
 export default function OrderDetailClient({ order: initial }: { order: any }) {
   const [order,    setOrder]    = useState(initial);
   const [status,   setStatus]   = useState(initial.status);
-  const [awb,      setAwb]      = useState(initial.delhivery_awb ?? "");
   const [saving,   setSaving]   = useState(false);
   const [shipping, setShipping] = useState(false);
 
@@ -43,14 +42,14 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
     const res  = await fetch(`/api/admin/orders/${order.id}`, {
       method:  "PUT",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ status, delhivery_awb: awb || null }),
+      body:    JSON.stringify({ status }),
     });
     const json = await res.json();
     setSaving(false);
     if (!json.success) {
       toast.error(json.error ?? "Update failed");
     } else {
-      setOrder((o: any) => ({ ...o, status, delhivery_awb: awb }));
+      setOrder((o: any) => ({ ...o, status }));
       toast.success("Order updated");
     }
   };
@@ -64,7 +63,7 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
     setOrder((o: any) => ({
       ...o,
       status:                 "processing",
-      shiprocket_order_id:    json.data.shiprocket_order_id ?? o.shiprocket_order_id,
+      shiprocket_order_id:    json.data.shiprocket_order_id    ?? o.shiprocket_order_id,
       shiprocket_shipment_id: json.data.shiprocket_shipment_id ?? o.shiprocket_shipment_id,
     }));
     setStatus("processing");
@@ -103,8 +102,6 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
           <div className="px-4 sm:px-5 py-4 border-b border-gray-100">
             <p className="font-semibold text-gray-900">Items ({items.length})</p>
           </div>
-
-          {/* Scrollable on mobile so columns never crush */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[400px]">
               <thead className="bg-gray-50 border-b border-gray-100">
@@ -123,11 +120,7 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
                       <div className="flex items-center gap-2 sm:gap-3">
                         {item.product?.images?.[0] && (
                           <div className="w-9 h-11 sm:w-10 sm:h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                            <img
-                              src={item.product.images[0]}
-                              alt={item.product_name}
-                              className="w-full h-full object-contain"
-                            />
+                            <img src={item.product.images[0]} alt={item.product_name} className="w-full h-full object-contain" />
                           </div>
                         )}
                         <p className="font-medium text-gray-800 line-clamp-2 text-xs sm:text-sm">
@@ -189,9 +182,7 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
           {order.razorpay_payment_id && (
             <div className="mt-4 pt-4 border-t border-gray-100">
               <p className="text-xs font-medium text-gray-500 mb-1">Razorpay Payment ID</p>
-              <p className="text-xs font-mono text-gray-700 break-all">
-                {order.razorpay_payment_id}
-              </p>
+              <p className="text-xs font-mono text-gray-700 break-all">{order.razorpay_payment_id}</p>
             </div>
           )}
         </div>
@@ -229,17 +220,6 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
               {order.courier_name && (
                 <p className="text-xs text-blue-600">Courier: {order.courier_name}</p>
               )}
-              {(order.shiprocket_awb || order.delhivery_awb) && (
-                <a
-                  href={`https://shiprocket.co/tracking/${order.shiprocket_awb || order.delhivery_awb}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-700 font-bold hover:underline flex items-center gap-1 break-all"
-                >
-                  Track: {order.shiprocket_awb || order.delhivery_awb}
-                  <ExternalLink size={11} className="shrink-0" />
-                </a>
-              )}
               <p className="text-[11px] text-blue-500 mt-1">
                 Status auto-updates via webhook when courier scans.
               </p>
@@ -260,19 +240,6 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
                 <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              Manual AWB / Tracking
-              <span className="font-normal text-gray-400 ml-1">(filled by Shiprocket automatically)</span>
-            </label>
-            <input
-              value={awb}
-              onChange={(e) => setAwb(e.target.value)}
-              placeholder="Auto-filled by Shiprocket"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 font-mono"
-            />
           </div>
 
           <button
