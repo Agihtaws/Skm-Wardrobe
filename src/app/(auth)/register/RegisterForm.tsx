@@ -37,6 +37,16 @@ export default function RegisterForm() {
       setLoading(false);
       return;
     }
+
+    // Send welcome email via Resend (fire-and-forget, don't block UI)
+    fetch("/api/auth/welcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, name: fullName }),
+    }).catch(() => {
+      // Silently ignore — welcome email failure shouldn't block registration
+    });
+
     toast.success("Check your email to confirm your account!");
     router.push("/login");
   };
