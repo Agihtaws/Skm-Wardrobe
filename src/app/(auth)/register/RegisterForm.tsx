@@ -9,11 +9,11 @@ import toast from "react-hot-toast";
 
 export default function RegisterForm() {
   const router = useRouter();
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [fullName, setFullName]         = useState("");
+  const [email, setEmail]               = useState("");
+  const [password, setPassword]         = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]           = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -22,21 +22,36 @@ export default function RegisterForm() {
       toast.error("Password must be at least 8 characters");
       return;
     }
+
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data:            { full_name: fullName },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+
     if (error) {
       toast.error(error.message);
       setLoading(false);
       return;
     }
+
+    // ── Email confirmation is OFF in Supabase dashboard ──
+    // When disabled, signUp returns a live session immediately.
+    // Redirect straight to home so the user can start shopping.
+    if (data.session) {
+      toast.success(`Welcome, ${fullName.split(" ")[0]}! 🎉`);
+      router.push("/");
+      return;
+    }
+
+    // ── Fallback: email confirmation is still ON ──
+    // (shouldn't happen in production once you disable it in Supabase)
     toast.success("Check your email to confirm your account!");
     router.push("/login");
   };
@@ -46,9 +61,7 @@ export default function RegisterForm() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options:  { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) {
       toast.error(error.message);
@@ -141,7 +154,7 @@ export default function RegisterForm() {
             <hr className="flex-1 border-gray-200" />
           </div>
 
-          {/* Google — below form */}
+          {/* Google */}
           <button
             type="button"
             onClick={handleGoogle}
