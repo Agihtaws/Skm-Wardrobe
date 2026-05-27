@@ -212,6 +212,14 @@ export default function CartDrawer() {
               Proceed to Checkout <ArrowRight size={18} />
             </Link>
 
+            <Link
+              href="/cart"
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-center gap-2 w-full py-3 border-2 border-gray-200 hover:border-pink-300 text-gray-700 hover:text-pink-600 text-sm font-semibold rounded-xl transition-colors"
+            >
+              <ShoppingBag size={15} /> View Cart
+            </Link>
+
             <button
               onClick={() => setOpen(false)}
               className="w-full text-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
