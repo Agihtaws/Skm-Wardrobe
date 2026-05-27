@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ok, err, unauthorized, forbidden, serverError } from "@/lib/api-response";
+import { ok, err, unauthorized, serverError } from "@/lib/api-response";
 
 export async function POST(request: Request) {
   try {
@@ -15,15 +15,19 @@ export async function POST(request: Request) {
 
     const { data: order } = await admin
       .from("orders")
-      .select("*, items:order_items(product_id, variant_id, quantity)")  // ✅ added variant_id
+      .select("*, items:order_items(product_id, variant_id, quantity)")
       .eq("id", order_id)
       .eq("user_id", user.id)
       .single();
 
-    if (!order)                                      return err("Order not found", 404);
-    if (!["pending", "paid"].includes(order.status)) return err("This order cannot be cancelled");
+    if (!order) return err("Order not found", 404);
 
-    // ✅ Updated: restore variant stock if applicable
+    // ✅ Allow cancel up to processing — once shipped, no more cancels
+    if (!["pending", "paid", "processing"].includes(order.status)) {
+      return err("This order cannot be cancelled — it has already been shipped");
+    }
+
+    // Restore stock
     for (const item of order.items ?? []) {
       if (item.variant_id) {
         const { data: variant } = await admin

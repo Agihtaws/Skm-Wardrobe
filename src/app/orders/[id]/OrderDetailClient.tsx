@@ -56,7 +56,7 @@ export default function OrderDetailClient({
   const isCancelled = order.status === "cancelled";
   const isDelivered = order.status === "delivered";
   const isShipped   = order.status === "shipped";
-  const canCancel   = ["pending", "paid"].includes(order.status);
+  const canCancel   = ["pending", "paid", "processing"].includes(order.status);
   const activeStep  = STEP_ORDER.indexOf(order.status);
   const items: any[] = order.items ?? [];
   const addr         = order.address;
