@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, err, unauthorized, serverError } from "@/lib/api-response";
+import { sendEmail, emailOrderCancelled } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -22,44 +23,53 @@ export async function POST(request: Request) {
 
     if (!order) return err("Order not found", 404);
 
-    // ✅ Allow cancel up to processing — once shipped, no more cancels
     if (!["pending", "paid", "processing"].includes(order.status)) {
       return err("This order cannot be cancelled — it has already been shipped");
     }
 
-    // Restore stock
+    // ── Restore stock (variant-aware) ──────────────────────────────────
     for (const item of order.items ?? []) {
       if (item.variant_id) {
         const { data: variant } = await admin
-          .from("product_variants")
-          .select("stock")
-          .eq("id", item.variant_id)
-          .single();
+          .from("product_variants").select("stock").eq("id", item.variant_id).single();
         if (variant) {
-          await admin
-            .from("product_variants")
+          await admin.from("product_variants")
             .update({ stock: variant.stock + item.quantity })
             .eq("id", item.variant_id);
         }
+        // Sync parent product stock
+        const { data: allVariants } = await admin
+          .from("product_variants").select("stock").eq("product_id", item.product_id);
+        if (allVariants) {
+          await admin.from("products")
+            .update({ stock: allVariants.reduce((s, v) => s + v.stock, 0) })
+            .eq("id", item.product_id);
+        }
       } else {
         const { data: product } = await admin
-          .from("products")
-          .select("stock")
-          .eq("id", item.product_id)
-          .single();
+          .from("products").select("stock").eq("id", item.product_id).single();
         if (product) {
-          await admin
-            .from("products")
+          await admin.from("products")
             .update({ stock: product.stock + item.quantity })
             .eq("id", item.product_id);
         }
       }
     }
 
-    await admin
-      .from("orders")
-      .update({ status: "cancelled" })
-      .eq("id", order_id);
+    await admin.from("orders").update({ status: "cancelled" }).eq("id", order_id);
+
+    // ── Send cancellation email ────────────────────────────────────────
+    if (user.email) {
+      const refundNote = order.payment_method === "online" && order.status === "paid"
+        ? "Since you paid online, your refund will be processed within 5–7 business days."
+        : undefined;
+
+      await sendEmail(
+        user.email,
+        "Order cancelled — SKM Wardrobe",
+        emailOrderCancelled(order_id, user.user_metadata?.full_name ?? "there", refundNote)
+      );
+    }
 
     return ok({ cancelled: true });
   } catch (e) {

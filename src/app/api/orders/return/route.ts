@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ok, err, unauthorized, serverError } from "@/lib/api-response";
 import { createReturn } from "@/lib/shiprocket";
+import { sendEmail, emailReturnRequested } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -21,13 +22,12 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .single();
 
-    if (!order)                     return err("Order not found", 404);
+    if (!order)                       return err("Order not found", 404);
     if (order.status !== "delivered") return err("Only delivered orders can be returned");
     if (order.return_requested)       return err("Return already requested");
 
     // Check 3-day window
-    const deliveredAt = new Date(order.updated_at);
-    const daysSince   = (Date.now() - deliveredAt.getTime()) / (1000 * 60 * 60 * 24);
+    const daysSince = (Date.now() - new Date(order.updated_at).getTime()) / (1000 * 60 * 60 * 24);
     if (daysSince > 3) return err("3-day return window has expired");
 
     // Save return request
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       return_status:    "requested",
     }).eq("id", order_id);
 
-    // Create Shiprocket return shipment if AWB exists
+    // Create Shiprocket return shipment if available
     if (order.shiprocket_order_id) {
       try {
         await createReturn({
@@ -71,8 +71,16 @@ export async function POST(request: Request) {
         });
       } catch (srErr) {
         console.error("Shiprocket return creation failed:", srErr);
-        // Don't fail the request — admin can create manually
       }
+    }
+
+    // Send email to customer
+    if (user.email) {
+      await sendEmail(
+        user.email,
+        "Return request received — SKM Wardrobe",
+        emailReturnRequested(order_id, user.user_metadata?.full_name ?? "there", reason.trim())
+      );
     }
 
     return ok({ return_id: returnReq?.id, message: "Return requested successfully" });
