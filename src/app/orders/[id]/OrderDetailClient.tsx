@@ -1,18 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft, Package, MapPin, CheckCircle,
   Clock, Truck, XCircle, RotateCcw,
-  ExternalLink, AlertTriangle, Smartphone, Loader2,
+  ExternalLink, AlertTriangle, Loader2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-
-declare global { interface Window { Razorpay: any; } }
 
 const STATUS_STEPS = [
   { key: "pending",    label: "Order Placed",  icon: Package    },
@@ -45,7 +43,6 @@ export default function OrderDetailClient({
   const [order, setOrder]             = useState(initial);
   const [cancelling, setCancelling]   = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [payingNow, setPayingNow]     = useState(false);
 
   // Return state
   const [showReturn, setShowReturn]             = useState(false);
@@ -68,77 +65,6 @@ export default function OrderDetailClient({
   const deliveredDate = new Date(order.updated_at);
   const daysSince = (Date.now() - deliveredDate.getTime()) / (1000 * 60 * 60 * 24);
   const canReturn = isDelivered && !returnDone && daysSince <= 3;
-
-  // COD order that hasn't shipped yet — can pay online
-  const canPayOnline =
-    order.payment_method === "cod" &&
-    ["pending", "processing"].includes(order.status);
-
-  // Load Razorpay
-  useEffect(() => {
-    if (!canPayOnline) return;
-    const s  = document.createElement("script");
-    s.src    = "https://checkout.razorpay.com/v1/checkout.js";
-    s.async  = true;
-    document.body.appendChild(s);
-    return () => { document.body.removeChild(s); };
-  }, [canPayOnline]);
-
-  const handlePayOnline = async () => {
-    setPayingNow(true);
-    const res  = await fetch("/api/orders/pay-now", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id: order.id }),
-    });
-    const json = await res.json();
-
-    if (!json.success) {
-      toast.error(json.error ?? "Failed to initiate payment");
-      setPayingNow(false);
-      return;
-    }
-
-    const { razorpay_order_id, amount, currency, key, order_id } = json.data;
-
-    const rzp = new window.Razorpay({
-      key, amount, currency,
-      order_id:    razorpay_order_id,
-      name:        "SKM Wardrobe",
-      description: "Order Payment",
-      theme:       { color: "#db2777" },
-      handler: async (response: any) => {
-        const verifyRes  = await fetch("/api/orders/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            order_id,
-            razorpay_order_id:   response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature:  response.razorpay_signature,
-          }),
-        });
-        const vj = await verifyRes.json();
-        if (!vj.success) {
-          toast.error("Payment verification failed");
-          setPayingNow(false);
-          return;
-        }
-        toast.success("Payment successful!");
-        setOrder((o: any) => ({ ...o, status: "paid", payment_method: "online" }));
-        setPayingNow(false);
-      },
-      modal: {
-        ondismiss: () => {
-          toast("Payment cancelled", { icon: "ℹ️" });
-          setPayingNow(false);
-        },
-      },
-    });
-
-    rzp.open();
-    setPayingNow(false);
-  };
 
   const handleCancel = async () => {
     setCancelling(true);
@@ -359,31 +285,6 @@ export default function OrderDetailClient({
 
       {/* Actions */}
       <div className="space-y-3">
-
-        {/* Pay Online (COD → Online upgrade) */}
-        {canPayOnline && (
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
-            <div className="flex items-start gap-3 mb-4">
-              <Smartphone size={20} className="text-blue-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-blue-800">Pay online now</p>
-                <p className="text-sm text-blue-600 mt-0.5">
-                  Avoid paying cash at delivery. Pay securely via UPI, card or net banking.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handlePayOnline}
-              disabled={payingNow}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-60 text-sm"
-            >
-              {payingNow
-                ? <><Loader2 size={16} className="animate-spin" /> Opening payment...</>
-                : <><Smartphone size={16} /> Pay ₹{Number(order.total).toLocaleString("en-IN")} Online</>
-              }
-            </button>
-          </div>
-        )}
 
         {/* Cancel */}
         {canCancel && !showConfirm && (
