@@ -29,6 +29,19 @@ export default function ReturnsClient({ initialReturns }: { initialReturns: any[
 
     if (!json.success) { toast.error(json.error); return; }
     setReturns((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+
+    if (status === "refunded") {
+      if (json.data?.manual_refund_needed) {
+        toast("COD order — please transfer refund manually via UPI/bank to customer.", {
+          icon: "⚠️", duration: 6000,
+        });
+      } else if (json.data?.razorpay_refund_id) {
+        toast.success(`Razorpay refund initiated (${json.data.razorpay_refund_id}). Customer gets it in 5-7 days.`);
+      } else {
+        toast.success("Marked as refunded");
+      }
+      return;
+    }
     toast.success(`Status updated to ${status}`);
   };
 
