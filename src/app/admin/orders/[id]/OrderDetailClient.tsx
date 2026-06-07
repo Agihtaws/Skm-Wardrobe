@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Address } from "@/types/database";
 
@@ -26,6 +26,7 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
   const [status,   setStatus]   = useState(initial.status);
   const [saving,   setSaving]   = useState(false);
   const [shipping, setShipping] = useState(false);
+  const [syncing,  setSyncing]  = useState(false);
 
   const address: Address = order.address;
   const items: any[]     = order.items ?? [];
@@ -70,6 +71,29 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
     toast.success("Shiprocket order created! Assign courier in Shiprocket dashboard.");
   };
 
+  // ── Sync status from Shiprocket ──────────────────────────────────────
+  const handleSync = async () => {
+    setSyncing(true);
+    const res  = await fetch(`/api/admin/orders/${order.id}/sync`, { method: "POST" });
+    const json = await res.json();
+    setSyncing(false);
+
+    if (!json.success) {
+      toast.error(json.error ?? "Sync failed");
+      return;
+    }
+
+    if (!json.data.synced) {
+      toast(json.data.message ?? "Already up to date", { icon: "ℹ️" });
+      return;
+    }
+
+    const newStatus = json.data.new_status;
+    setOrder((o: any) => ({ ...o, status: newStatus }));
+    setStatus(newStatus);
+    toast.success(`Status synced: ${json.data.old_status} → ${newStatus}`);
+  };
+
   return (
     <div className="p-3 sm:p-5 lg:p-6 max-w-4xl">
 
@@ -90,9 +114,23 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
             {order.payment_method === "cod" ? "Cash on Delivery" : "Paid Online"}
           </p>
         </div>
-        <span className={`shrink-0 px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${STATUS_BADGE[order.status] ?? ""}`}>
-          {order.status}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Sync button — only when Shiprocket order exists */}
+          {order.shiprocket_order_id && (
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              title="Sync status from Shiprocket"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors disabled:opacity-60"
+            >
+              <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
+              {syncing ? "Syncing..." : "Sync Shiprocket"}
+            </button>
+          )}
+          <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${STATUS_BADGE[order.status] ?? ""}`}>
+            {order.status}
+          </span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -123,9 +161,14 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
                             <img src={item.product.images[0]} alt={item.product_name} className="w-full h-full object-contain" />
                           </div>
                         )}
-                        <p className="font-medium text-gray-800 line-clamp-2 text-xs sm:text-sm">
-                          {item.product_name}
-                        </p>
+                        <div>
+                          <p className="font-medium text-gray-800 line-clamp-2 text-xs sm:text-sm">
+                            {item.product_name}
+                          </p>
+                          {item.size && (
+                            <span className="text-xs text-gray-400">Size: {item.size}</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 sm:px-5 py-3 whitespace-nowrap text-xs sm:text-sm">
@@ -221,7 +264,7 @@ export default function OrderDetailClient({ order: initial }: { order: any }) {
                 <p className="text-xs text-blue-600">Courier: {order.courier_name}</p>
               )}
               <p className="text-[11px] text-blue-500 mt-1">
-                Status auto-updates via webhook when courier scans.
+                Use "Sync Shiprocket" button (top right) if status doesn't update automatically.
               </p>
             </div>
           )}
