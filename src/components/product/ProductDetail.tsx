@@ -50,7 +50,7 @@ function ImageGallery({ images, name }: { images: string[]; name: string }) {
   return (
     <div className="flex flex-col gap-3">
       <div
-        className="relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 select-none"
+        className="relative rounded-2xl overflow-hidden bg-white border border-gray-100 select-none"  // changed bg-gray-50 → bg-white
         style={{ aspectRatio: "3/4", maxHeight: "440px" }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -90,7 +90,7 @@ function ImageGallery({ images, name }: { images: string[]; name: string }) {
           {images.map((img, i) => (
             <button key={i} onClick={() => setActive(i)}
               className={cn(
-                "relative flex-shrink-0 rounded-xl overflow-hidden border-2 bg-gray-50 transition-all w-14 h-16 sm:w-16 sm:h-20",
+                "relative flex-shrink-0 rounded-xl overflow-hidden border-2 bg-white transition-all w-14 h-16 sm:w-16 sm:h-20",  // changed bg-gray-50 → bg-white
                 i === active ? "border-pink-500 shadow-sm" : "border-transparent hover:border-gray-300"
               )}>
               <Image src={img} alt={`View ${i + 1}`} fill className="object-contain p-1" sizes="64px" />
