@@ -89,7 +89,7 @@ function HeroCarousel({ items }: { items: Category[] }) {
   const GAP = 10;
 
   return (
-    <div className="bg-pink-50 border-b border-pink-100 pb-1">
+    <div className="border-b pb-1"> {/* Removed bg-pink-50 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
         {total > perPage && (
@@ -97,13 +97,13 @@ function HeroCarousel({ items }: { items: Category[] }) {
             <button
               onClick={() => goTo(current - 1)}
               disabled={current === 0}
-              className="w-6 h-6 bg-pink-50 hover:bg-pink-600 hover:text-white border border-pink-200 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
+              className="w-6 h-6 hover:bg-gray-100 border border-gray-200 rounded-full flex items-center justify-center transition-all disabled:opacity-30"
             >
               <ChevronLeft size={12} />
             </button>
             <button
               onClick={() => goTo(current + 1)}
-              className="w-6 h-6 bg-pink-50 hover:bg-pink-600 hover:text-white border border-pink-200 rounded-full flex items-center justify-center transition-all"
+              className="w-6 h-6 hover:bg-gray-100 border border-gray-200 rounded-full flex items-center justify-center transition-all"
             >
               <ChevronRight size={12} />
             </button>
@@ -129,7 +129,7 @@ function HeroCarousel({ items }: { items: Category[] }) {
                 }}
               >
                 <div className="rounded-xl overflow-hidden border border-gray-100 group-hover:border-pink-300 group-hover:shadow-md transition-all duration-300 bg-white">
-                  <div className="relative w-full bg-gray-50" style={{ aspectRatio: "3 / 5" }}>
+                  <div className="relative w-full bg-white" style={{ aspectRatio: "3 / 5" }}> {/* Changed bg-gray-50 to bg-white */}
                     <Image
                       src={cat.image_url!}
                       alt={cat.name}
@@ -143,7 +143,7 @@ function HeroCarousel({ items }: { items: Category[] }) {
                       </div>
                     )}
                   </div>
-                  <div className="bg-white border-t border-gray-100 px-2.5 py-2">
+                  <div className="border-t border-gray-100 px-2.5 py-2"> {/* Removed bg-white */}
                     <p className="text-gray-900 font-bold text-xs leading-tight truncate">
                       {cat.name}
                     </p>
@@ -166,7 +166,7 @@ function HeroCarousel({ items }: { items: Category[] }) {
                 className={`transition-all rounded-full ${
                   i === current % total
                     ? "w-4 h-1.5 bg-pink-600"
-                    : "w-1.5 h-1.5 bg-gray-300 hover:bg-pink-300"
+                    : "w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400" // Changed hover:bg-pink-300 to hover:bg-gray-400
                 }`}
               />
             ))}
