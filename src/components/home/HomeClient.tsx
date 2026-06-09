@@ -128,13 +128,14 @@ function HeroCarousel({ items }: { items: Category[] }) {
                   width: `calc(${100 / perPage}% - ${(GAP * (perPage - 1)) / perPage}px)`,
                 }}
               >
-                <div className="rounded-xl overflow-hidden border border-gray-100 group-hover:border-pink-300 group-hover:shadow-md transition-all duration-300 bg-white">
-                  <div className="relative w-full bg-gray-50" style={{ aspectRatio: "3 / 5" }}>
+                <div className="rounded-xl overflow-hidden border border-gray-100 group-hover:border-pink-300 group-hover:shadow-md transition-all duration-300">
+                  {/* Image fills card fully — no bg, object-cover crops to fit */}
+                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: "3 / 5" }}>
                     <Image
                       src={cat.image_url!}
                       alt={cat.name}
                       fill
-                      className="object-contain group-hover:scale-105 transition-transform duration-500"
+                      className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
                       sizes="(max-width: 640px) 50vw, 20vw"
                     />
                     {cat.gender && LABELS[cat.gender] && (
@@ -229,13 +230,13 @@ function HomeProductCard({ product }: { product: Product }) {
       className="group flex flex-col bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg hover:border-pink-100 transition-all duration-200"
     >
       {/* Image */}
-      <div className="relative bg-gray-50 overflow-hidden" style={{ aspectRatio: "3/4" }}>
+      <div className="relative overflow-hidden" style={{ aspectRatio: "3/4" }}>
         <Image
           src={product.images[imgIdx] ?? "/placeholder.png"}
           alt={product.name}
           fill
           sizes="(max-width: 640px) 50vw, 25vw"
-          className="object-contain p-2 transition-transform duration-300 group-hover:scale-[1.03]"
+          className="object-cover object-top transition-transform duration-300 group-hover:scale-[1.03]"
         />
 
         {hasDiscount && (
@@ -398,7 +399,6 @@ export default function HomeClient({ sections, carouselItems }: Props) {
           </div>
         </div>
       )}
-
 
       {/* Product sections */}
       {sections.length === 0 ? (
