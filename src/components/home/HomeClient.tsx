@@ -229,7 +229,7 @@ function HomeProductCard({ product }: { product: Product }) {
       className="group flex flex-col bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg hover:border-pink-100 transition-all duration-200"
     >
       {/* Image */}
-      <div className="relative bg-gray-50 overflow-hidden" style={{ aspectRatio: "3/4" }}>
+      <div className="relative bg-white overflow-hidden" style={{ aspectRatio: "3/4" }}>  {/* changed bg-gray-50 → bg-white */}
         <Image
           src={product.images[imgIdx] ?? "/placeholder.png"}
           alt={product.name}
