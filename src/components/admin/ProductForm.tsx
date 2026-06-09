@@ -290,105 +290,111 @@ export default function ProductForm({ product, categories, attributes: initialAt
               </div>
             )}
 
-            {/* Row 1: Attribute select + "New attribute" toggle */}
-            <div className="flex gap-2">
-              <select value={newAttrId} onChange={(e) => { setNewAttrId(e.target.value); setNewValueId(""); setShowNewValue(false); }}
-                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
-                <option value="">Select attribute</option>
-                {attributes.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-              <button
-                type="button"
-                onClick={() => { setShowNewAttr((v) => !v); setShowNewValue(false); }}
-                title="Create new attribute"
-                className={`px-3 py-2 text-sm rounded-lg border transition-colors ${showNewAttr ? "bg-pink-600 text-white border-pink-600" : "border-gray-200 text-gray-600 hover:border-pink-400 hover:text-pink-600"}`}
-              >
-                <Plus size={15} />
-              </button>
+            {/* Side-by-side: [Attribute ▾] [+ new] | [Value ▾] [+ new] [Add] */}
+            <div className="flex gap-2 items-start">
+
+              {/* LEFT — attribute column */}
+              <div className="flex-1 space-y-1.5">
+                <div className="flex gap-1.5">
+                  <select
+                    value={newAttrId}
+                    onChange={(e) => { setNewAttrId(e.target.value); setNewValueId(""); setShowNewValue(false); setShowNewAttr(false); }}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  >
+                    <option value="">Select attribute</option>
+                    {attributes.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewAttr((v) => !v); setShowNewValue(false); }}
+                    title="Create new attribute"
+                    className={`px-2.5 py-2 text-sm rounded-lg border transition-colors ${showNewAttr ? "bg-pink-600 text-white border-pink-600" : "border-gray-200 text-gray-500 hover:border-pink-400 hover:text-pink-600"}`}
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+                {showNewAttr && (
+                  <div className="flex gap-1.5 p-2.5 bg-pink-50 rounded-lg border border-pink-100">
+                    <input
+                      autoFocus
+                      value={newAttrInput}
+                      onChange={(e) => setNewAttrInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), createAttributeInline())}
+                      placeholder="New attribute…"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={createAttributeInline}
+                      disabled={creatingAttr || !newAttrInput.trim()}
+                      className="px-2.5 py-1.5 text-xs bg-pink-600 hover:bg-pink-700 text-white rounded-lg disabled:opacity-60 transition-colors whitespace-nowrap"
+                    >
+                      {creatingAttr ? "…" : "Save"}
+                    </button>
+                    <button type="button" onClick={() => setShowNewAttr(false)} className="text-gray-400 hover:text-gray-600 px-1">
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT — value column */}
+              <div className="flex-1 space-y-1.5">
+                <div className="flex gap-1.5">
+                  <select
+                    value={newValueId}
+                    onChange={(e) => setNewValueId(e.target.value)}
+                    disabled={!newAttrId}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 disabled:opacity-50"
+                  >
+                    <option value="">Select value</option>
+                    {attributes.find((a) => a.id === newAttrId)?.values?.map((v) => (
+                      <option key={v.id} value={v.id}>{v.value}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewValue((v) => !v); setShowNewAttr(false); }}
+                    disabled={!newAttrId}
+                    title="Create new value"
+                    className={`px-2.5 py-2 text-sm rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${showNewValue ? "bg-pink-600 text-white border-pink-600" : "border-gray-200 text-gray-500 hover:border-pink-400 hover:text-pink-600"}`}
+                  >
+                    <Plus size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addAttrEntry}
+                    className="px-3 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                {showNewValue && newAttrId && (
+                  <div className="flex gap-1.5 p-2.5 bg-pink-50 rounded-lg border border-pink-100">
+                    <input
+                      autoFocus
+                      value={newValueInput}
+                      onChange={(e) => setNewValueInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), createValueInline())}
+                      placeholder="New value…"
+                      className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={createValueInline}
+                      disabled={creatingValue || !newValueInput.trim()}
+                      className="px-2.5 py-1.5 text-xs bg-pink-600 hover:bg-pink-700 text-white rounded-lg disabled:opacity-60 transition-colors whitespace-nowrap"
+                    >
+                      {creatingValue ? "…" : "Save"}
+                    </button>
+                    <button type="button" onClick={() => setShowNewValue(false)} className="text-gray-400 hover:text-gray-600 px-1">
+                      <X size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
             </div>
-
-            {/* Inline: create new attribute */}
-            {showNewAttr && (
-              <div className="flex gap-2 p-3 bg-pink-50 rounded-lg border border-pink-100">
-                <input
-                  autoFocus
-                  value={newAttrInput}
-                  onChange={(e) => setNewAttrInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), createAttributeInline())}
-                  placeholder="New attribute name (e.g. Neck, Sleeve…)"
-                  className="flex-1 px-3 py-1.5 text-sm border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white"
-                />
-                <button
-                  type="button"
-                  onClick={createAttributeInline}
-                  disabled={creatingAttr || !newAttrInput.trim()}
-                  className="px-3 py-1.5 text-sm bg-pink-600 hover:bg-pink-700 text-white rounded-lg disabled:opacity-60 transition-colors whitespace-nowrap"
-                >
-                  {creatingAttr ? "…" : "Create"}
-                </button>
-                <button type="button" onClick={() => setShowNewAttr(false)} className="px-2 text-gray-400 hover:text-gray-600">
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-
-            {/* Row 2: Value select + "New value" toggle (only when attribute selected) */}
-            {newAttrId && (
-              <div className="flex gap-2">
-                <select value={newValueId} onChange={(e) => setNewValueId(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
-                  <option value="">Select value</option>
-                  {attributes.find((a) => a.id === newAttrId)?.values?.map((v) => (
-                    <option key={v.id} value={v.id}>{v.value}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => { setShowNewValue((v) => !v); setShowNewAttr(false); }}
-                  title="Create new value"
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${showNewValue ? "bg-pink-600 text-white border-pink-600" : "border-gray-200 text-gray-600 hover:border-pink-400 hover:text-pink-600"}`}
-                >
-                  <Plus size={15} />
-                </button>
-                <button type="button" onClick={addAttrEntry}
-                  className="px-3 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors">
-                  Add
-                </button>
-              </div>
-            )}
-
-            {/* Inline: create new value */}
-            {showNewValue && newAttrId && (
-              <div className="flex gap-2 p-3 bg-pink-50 rounded-lg border border-pink-100">
-                <input
-                  autoFocus
-                  value={newValueInput}
-                  onChange={(e) => setNewValueInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), createValueInline())}
-                  placeholder={`New value for "${attributes.find((a) => a.id === newAttrId)?.name}" (e.g. Red, Cotton…)`}
-                  className="flex-1 px-3 py-1.5 text-sm border border-pink-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white"
-                />
-                <button
-                  type="button"
-                  onClick={createValueInline}
-                  disabled={creatingValue || !newValueInput.trim()}
-                  className="px-3 py-1.5 text-sm bg-pink-600 hover:bg-pink-700 text-white rounded-lg disabled:opacity-60 transition-colors whitespace-nowrap"
-                >
-                  {creatingValue ? "…" : "Create"}
-                </button>
-                <button type="button" onClick={() => setShowNewValue(false)} className="px-2 text-gray-400 hover:text-gray-600">
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-
-            {/* Add button when no attribute selected yet (old single-row flow fallback) */}
-            {!newAttrId && (
-              <button type="button" onClick={addAttrEntry}
-                className="px-3 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors hidden">
-                <Plus size={16} />
-              </button>
-            )}
           </div>
 
           {/* Sizes / Variants */}
