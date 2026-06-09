@@ -84,7 +84,7 @@ export default function ProductCard({ product, priority = false }: Props) {
     >
       {/* Image */}
       <div
-        className="relative bg-gray-50 overflow-hidden"
+        className="relative bg-white overflow-hidden"  // changed bg-gray-50 → bg-white
         style={{ aspectRatio: "3/4" }}
       >
         <Image
@@ -109,17 +109,17 @@ export default function ProductCard({ product, priority = false }: Props) {
         {hasMultiple && (
           <>
             <button
-  onClick={prevImg}
-  className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-all z-10"
->
-  <ChevronLeft size={14} className="text-gray-600" />
-</button>
-<button
-  onClick={nextImg}
-  className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-all z-10"
->
-  <ChevronRight size={14} className="text-gray-600" />
-</button>
+              onClick={prevImg}
+              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-all z-10"
+            >
+              <ChevronLeft size={14} className="text-gray-600" />
+            </button>
+            <button
+              onClick={nextImg}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-white/90 hover:bg-white rounded-full flex items-center justify-center shadow-sm transition-all z-10"
+            >
+              <ChevronRight size={14} className="text-gray-600" />
+            </button>
           </>
         )}
 
