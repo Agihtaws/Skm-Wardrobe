@@ -289,21 +289,27 @@ export default function ProductDetail({ product, related }: Props) {
 
           {/* Attributes */}
           {Object.keys(attrGroups).length > 0 && (
-            <div className="space-y-2.5 border-t border-pink-100 pt-4">
-              {Object.entries(attrGroups).map(([name, values]) => (
-                <div key={name} className="flex items-start gap-3">
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest w-16 sm:w-20 flex-shrink-0 pt-1.5">
-                    {name}
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {values.map((v) => (
-                      <span key={v} className="px-3 py-1 bg-white text-gray-800 text-sm rounded-full border border-pink-300 font-medium shadow-sm">
-                        {v}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="border-t border-pink-100 pt-4 rounded-xl overflow-hidden border border-gray-100">
+              <table className="w-full text-sm border-collapse">
+                <tbody>
+                  {Object.entries(attrGroups).map(([name, values], i) => (
+                    <tr key={name} className={i % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                      <td className="text-[11px] font-bold text-gray-400 uppercase tracking-wider py-2.5 px-3 w-[40%] align-middle border-r border-gray-100">
+                        {name}
+                      </td>
+                      <td className="py-2 px-3 align-middle">
+                        <div className="flex flex-wrap gap-1.5">
+                          {values.map((v) => (
+                            <span key={v} className="text-gray-800 text-sm font-medium">
+                              {v}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
