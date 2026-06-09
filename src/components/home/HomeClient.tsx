@@ -89,7 +89,7 @@ function HeroCarousel({ items }: { items: Category[] }) {
   const GAP = 10;
 
   return (
-    <div className="border-b pb-1"> {/* Removed bg-pink-50 */}
+    <div className="border-b pb-1 pt-0 md:pt-4"> {/* Removed bg-pink-50 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
         {total > perPage && (
