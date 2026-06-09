@@ -289,27 +289,26 @@ export default function ProductDetail({ product, related }: Props) {
 
           {/* Attributes */}
           {Object.keys(attrGroups).length > 0 && (
-            <div className="border-t border-pink-100 pt-4 rounded-xl overflow-hidden border border-gray-100">
-              <table className="w-full text-sm border-collapse">
-                <tbody>
-                  {Object.entries(attrGroups).map(([name, values], i) => (
-                    <tr key={name} className={i % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                      <td className="text-[11px] font-bold text-gray-400 uppercase tracking-wider py-2.5 px-3 w-[40%] align-middle border-r border-gray-100">
-                        {name}
-                      </td>
-                      <td className="py-2 px-3 align-middle">
-                        <div className="flex flex-wrap gap-1.5">
-                          {values.map((v) => (
-                            <span key={v} className="text-gray-800 text-sm font-medium">
-                              {v}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="border-t border-pink-100 pt-4">
+              <div className="rounded-2xl overflow-hidden border border-pink-100 shadow-sm">
+                {Object.entries(attrGroups).map(([name, values], i) => (
+                  <div key={name} className={cn(
+                    "flex items-center gap-3 px-4 py-2.5",
+                    i % 2 === 0 ? "bg-pink-50/60" : "bg-white"
+                  )}>
+                    <span className="text-[10px] font-extrabold text-pink-400 uppercase tracking-widest w-[38%] flex-shrink-0">
+                      {name}
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {values.map((v) => (
+                        <span key={v} className="px-2.5 py-0.5 bg-white text-gray-700 text-[13px] font-semibold rounded-lg border border-pink-200 shadow-sm">
+                          {v}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
