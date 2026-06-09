@@ -292,12 +292,12 @@ export default function ProductDetail({ product, related }: Props) {
             <div className="space-y-2.5 border-t border-pink-100 pt-4">
               {Object.entries(attrGroups).map(([name, values]) => (
                 <div key={name} className="flex items-start gap-3">
-                  <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest w-16 sm:w-20 flex-shrink-0 pt-1.5">
+                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest w-16 sm:w-20 flex-shrink-0 pt-1.5">
                     {name}
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {values.map((v) => (
-                      <span key={v} className="px-3 py-1 bg-pink-50 text-pink-700 text-sm rounded-full border border-pink-200">
+                      <span key={v} className="px-3 py-1 bg-white text-gray-800 text-sm rounded-full border border-pink-300 font-medium shadow-sm">
                         {v}
                       </span>
                     ))}
