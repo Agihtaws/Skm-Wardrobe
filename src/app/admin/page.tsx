@@ -38,7 +38,7 @@ export default async function DashboardPage() {
       .limit(10),
     supabase.from("orders")
       .select("total")
-      .in("status", ["paid", "processing", "shipped", "delivered"]),
+      .eq("status", "delivered"),
   ]);
 
   const totalRevenue = revenue?.reduce((s, o) => s + Number(o.total), 0) ?? 0;
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
     { label: "Active Products", value: totalProducts ?? 0,        icon: Package,     color: "text-blue-600",  bg: "bg-blue-50"  },
     { label: "Total Orders",    value: totalOrders ?? 0,          icon: ShoppingBag, color: "text-green-600", bg: "bg-green-50" },
     { label: "Needs Action",    value: pendingOrders ?? 0,        icon: Clock,       color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "Total Revenue",   value: formatPrice(totalRevenue), icon: TrendingUp,  color: "text-pink-600",  bg: "bg-pink-50"  },
+    { label: "Revenue (Delivered)", value: formatPrice(totalRevenue), icon: TrendingUp,  color: "text-pink-600",  bg: "bg-pink-50"  },
   ];
 
   return (
