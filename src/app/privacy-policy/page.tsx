@@ -150,13 +150,7 @@ export default function PrivacyPolicyPage() {
             <p>If you have any questions about this Privacy Policy, please contact us:</p>
             <div className="mt-3 bg-pink-50 border border-pink-100 rounded-xl p-4 space-y-1">
               <p><strong>SKM Wardrobe</strong></p>
-              <p>Salem, Tamil Nadu, India</p>
-              <p>
-                Email:{" "}
-                <a href="mailto:support@skmwardrobe.in" className="text-pink-600 hover:underline">
-                  support@skmwardrobe.in
-                </a>
-              </p>
+              <p>Kumbakonam, Thanjavur, Tamil Nadu, India</p>
               <p>
                 Website:{" "}
                 <a href="https://skmwardrobe.in" className="text-pink-600 hover:underline">
