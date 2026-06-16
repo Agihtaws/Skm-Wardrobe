@@ -26,6 +26,9 @@ export const metadata: Metadata = {
     "silk sarees", "kids ethnic wear", "women clothing india",
     "SKM Wardrobe", "Thanjavur sarees",
   ],
+  verification: {
+    google: "WCU9c-5qZw16run7atusyOi7YaZ2Mbb0AeYwxAF9cok",
+  },
   icons: {
     icon:     "/logo.png",
     shortcut: "/logo.png",
@@ -64,7 +67,6 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen bg-pink-50 text-gray-900 antialiased flex flex-col">
         <AuthProvider>
-          {/* Store chrome — hidden on all /admin/* pages */}
           {!isAdmin && <HeaderServer />}
           {!isAdmin && <CartDrawer />}
 
